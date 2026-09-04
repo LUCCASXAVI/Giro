@@ -1181,7 +1181,92 @@ async function renderAdmin(){
     });
   });
 }
-
+async function renderAdmin(){
+  const listEl = document.getElementById('adminUsersList');
+  listEl.innerHTML = '<div class="loading">Carregando usuários…</div>';
+  
+  // Buscar todos os perfis
+  const { data: profiles, error: profilesError } = await supa.from('profiles').select('*');
+  
+  console.log('Perfis:', profiles);
+  console.log('Erro:', profilesError);
+  
+  if(profilesError){
+    listEl.innerHTML = '<div class="empty">Erro ao carregar: ' + profilesError.message + '</div>';
+    return;
+  }
+  
+  if(!profiles || profiles.length === 0){
+    listEl.innerHTML = '<div class="empty">Nenhum usuário cadastrado.</div>';
+    return;
+  }
+  
+  const totalUsers = profiles.length;
+  const premiumUsers = profiles.filter(p => p.is_premium).length;
+  const trialUsers = profiles.filter(p => !p.is_premium && p.payment_status === 'trial').length;
+  const revenue = premiumUsers * 15.99;
+  
+  document.getElementById('adminTotalUsers').textContent = totalUsers;
+  document.getElementById('adminPremiumUsers').textContent = premiumUsers;
+  document.getElementById('adminTrialUsers').textContent = trialUsers;
+  document.getElementById('adminRevenue').textContent = fmtBRL(revenue);
+  
+  const { data: allEntries } = await supa.from('entries').select('*');
+  
+  let html = '<p class="ledger-title" style="font-size:13px;margin:16px 0 8px;">Usuários cadastrados</p>';
+  
+  profiles.forEach(p => {
+    const userEntries = (allEntries || []).filter(e => e.user_id === p.id);
+    const totalNet = userEntries.reduce((s,e) => s + ((e.uber||0)+(e.n99||0)+(e.indrive||0)+(e.particular||0) - Number(e.fuel) - Number(e.food)), 0);
+    
+    const statusLabel = p.is_premium ? 'Premium' : p.is_blocked ? 'Bloqueado' : 'Teste';
+    const statusClass = p.is_premium ? 'paid' : p.is_blocked ? 'overdue' : 'warning';
+    
+    html += '<div class="bill-card">';
+    html += '<div class="bill-card-header">';
+    html += '<span class="bill-card-name">' + (p.name || 'Sem nome') + (p.is_admin ? ' 👑' : '') + '</span>';
+    html += '<span class="bill-status ' + statusClass + '">' + statusLabel + '</span>';
+    html += '</div>';
+    html += '<div class="bill-card-details">';
+    html += '<span>Renda: ' + fmtBRL(p.monthly_income || 0) + ' · Registros: ' + userEntries.length + '</span>';
+    html += '<span>Resultado: ' + fmtBRL(totalNet) + '</span>';
+    html += '</div>';
+    html += '<div class="bill-card-actions">';
+    if(!p.is_admin){
+      html += '<button class="btn-pay make-admin-btn" data-id="' + p.id + '" style="flex:1;">Tornar admin</button>';
+    }
+    if(p.is_blocked){
+      html += '<button class="btn-delete unblock-btn" data-id="' + p.id + '">Desbloquear</button>';
+    } else if(!p.is_admin){
+      html += '<button class="btn-delete block-btn" data-id="' + p.id + '">Bloquear</button>';
+    }
+    html += '</div>';
+    html += '</div>';
+  });
+  
+  listEl.innerHTML = html;
+  
+  listEl.querySelectorAll('.make-admin-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await supa.from('profiles').update({ is_admin: true }).eq('id', btn.dataset.id);
+      await renderAdmin();
+    });
+  });
+  
+  listEl.querySelectorAll('.block-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await supa.from('profiles').update({ is_blocked: true }).eq('id', btn.dataset.id);
+      await renderAdmin();
+    });
+  });
+  
+  listEl.querySelectorAll('.unblock-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await supa.from('profiles').update({ is_blocked: false }).eq('id', btn.dataset.id);
+      await renderAdmin();
+    });
+  });
+}
 // ---------- PWA ----------
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
