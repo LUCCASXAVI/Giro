@@ -4,8 +4,8 @@
   "description": "Organize suas finanças de forma inteligente.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F0F2F5",
-  "theme_color": "#2563EB",
+  "background_color": "#0F0F0F",
+  "theme_color": "#00E676",
   "orientation": "portrait",
   "icons": [
     {
