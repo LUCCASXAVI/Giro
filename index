@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Giro — Gestão Financeira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0F0F0F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Giro">
+<style>
+  :root{
+    --bg:#0F0F0F;
+    --surface:#1A1A1A;
+    --surface-2:#242424;
+    --border:#2E2E2E;
+    --text:#FFFFFF;
+    --text-muted:#B5B5B5;
+    --money:#00C853;
+    --money-neon:#00E676;
+    --money-soft:rgba(0,200,83,0.15);
+    --expense:#FF3B30;
+    --expense-soft:rgba(255,59,48,0.15);
+    --warning:#FFB800;
+    --warning-soft:rgba(255,184,0,0.15);
+    --accent:#2979FF;
+    --purple:#8B5CF6;
+    --overdue:#FF3B30;
+    --overdue-soft:rgba(255,59,48,0.15);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;padding:0 16px 40px;min-height:100vh;}
+  .wrap{max-width:600px;margin:0 auto;}
+  .hidden{display:none !important;}
+  h1,h2,h3,.form-title,.ledger-title,.bill-card-name,.pricing-price,.collapsible-title{font-family:'Sora',sans-serif;}
+  
+  .app-header{padding:24px 0 16px;display:flex;justify-content:space-between;align-items:center;}
+  .greeting{font-size:13px;color:var(--text-muted);font-weight:600;}
+  .greeting-name{font-size:18px;font-weight:800;color:var(--text);font-family:'Sora',sans-serif;margin-top:2px;}
+  .header-actions{display:flex;gap:6px;}
+  .btn-icon{background:var(--surface);border:1px solid var(--border);color:var(--text);width:40px;height:40px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .btn-icon:hover{border-color:var(--money);color:var(--money);}
+  
+  .trial-banner{background:var(--warning-soft);border:1px solid var(--warning);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+  .renewal-banner{background:var(--overdue-soft);border:1px solid var(--overdue);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+  .btn-small{background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-family:'Inter',sans-serif;}
+  .btn-small:hover{border-color:var(--money);color:var(--money);}
+  
+  .main-balance{background:linear-gradient(135deg,#00695C 0%,#00C853 50%,#00E676 100%);border-radius:20px;padding:24px;margin-bottom:20px;color:#0F0F0F;box-shadow:0 8px 24px rgba(0,200,83,0.35);position:relative;overflow:hidden;}
+  .main-balance::before{content:"";position:absolute;top:-50%;right:-20%;width:200px;height:200px;background:rgba(255,255,255,0.1);border-radius:50%;}
+  .main-balance-label{font-size:12px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;opacity:0.8;position:relative;z-index:1;}
+  .main-balance-value{font-family:'Sora',sans-serif;font-size:40px;font-weight:800;margin:8px 0 4px;letter-spacing:-0.02em;position:relative;z-index:1;}
+  .main-balance-detail{font-size:13px;font-weight:600;opacity:0.8;position:relative;z-index:1;}
+  
+  .balance-extras{position:relative;z-index:1;margin-top:14px;}
+  .balance-bar{width:100%;height:8px;background:rgba(0,0,0,0.2);border-radius:99px;overflow:hidden;margin-top:8px;}
+  .balance-bar-fill{height:100%;background:linear-gradient(90deg,#0F0F0F,#1A1A1A);border-radius:99px;transition:width .4s ease;}
+  .balance-mini{display:flex;justify-content:space-between;gap:8px;margin-top:12px;}
+  .balance-mini-item{flex:1;background:rgba(0,0,0,0.15);border-radius:10px;padding:8px 10px;}
+  .balance-mini-label{font-size:9.5px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;opacity:0.7;}
+  .balance-mini-value{font-family:'Sora',sans-serif;font-size:15px;font-weight:800;margin-top:2px;}
+  
+  .alert-daily{margin-top:12px;background:rgba(255,59,48,0.9);color:#fff;border-radius:10px;padding:10px 12px;font-size:12.5px;font-weight:700;position:relative;z-index:1;}
+  
+  .collapsible{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;transition:all 0.3s;}
+  .collapsible-header{display:flex;justify-content:space-between;align-items:center;padding:18px;cursor:pointer;}
+  .collapsible-header .left{display:flex;align-items:center;gap:12px;}
+  .collapsible-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;}
+  .collapsible-title{font-size:15px;font-weight:700;color:var(--text);}
+  .collapsible-sub{font-size:12px;color:var(--text-muted);font-weight:500;margin-top:2px;}
+  .collapsible-arrow{font-size:18px;color:var(--text-muted);transition:transform 0.3s;font-weight:700;}
+  .collapsible.open .collapsible-arrow{transform:rotate(180deg);}
+  .collapsible-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border);}
+  .collapsible.open .collapsible-body{display:block;padding-top:18px;}
+  
+  .card-verde .collapsible-icon{background:linear-gradient(135deg,#00C853 0%,#00E676 100%);color:#0F0F0F;}
+  .card-vermelho .collapsible-icon{background:linear-gradient(135deg,#FF3B30 0%,#FF6B6B 100%);color:#fff;}
+  .card-roxo .collapsible-icon{background:linear-gradient(135deg,#8B5CF6 0%,#A78BFA 100%);color:#fff;}
+  .card-azul .collapsible-icon{background:linear-gradient(135deg,#2979FF 0%,#64B5F6 100%);color:#fff;}
+  .card-cinza .collapsible-icon{background:linear-gradient(135deg,#4B5563 0%,#6B7280 100%);color:#fff;}
+  
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;}
+  .field input,.field select{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;font-weight:600;}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--money);box-shadow:0 0 0 3px var(--money-soft);}
+  .hint{font-size:11px;color:var(--text-muted);margin-top:4px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 10px;padding:8px 12px;border-radius:8px;}
+  .section-title.receitas{background:var(--money-soft);color:var(--money-neon);}
+  .section-title.gastos{background:var(--expense-soft);color:var(--expense);}
+  
+  .btn-primary{width:100%;background:linear-gradient(135deg,#00E676 0%,#00B248 100%);color:#0F0F0F;border:none;border-radius:12px;padding:14px;font-weight:800;font-size:15px;cursor:pointer;font-family:'Sora',sans-serif;box-shadow:0 4px 12px rgba(0,230,118,0.3);display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;}
+  .btn-primary:disabled{opacity:0.5;cursor:default;}
+  .btn-pay{flex:1;background:linear-gradient(135deg,#00E676 0%,#00B248 100%);color:#0F0F0F;border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Sora',sans-serif;}
+  .btn-undo{flex:1;background:linear-gradient(135deg,#FFB800 0%,#FF6B00 100%);color:#0F0F0F;border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Sora',sans-serif;}
+  .btn-edit{background:linear-gradient(135deg,#2979FF 0%,#64B5F6 100%);color:#fff;border:none;border-radius:10px;padding:12px 14px;font-size:13px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:800;}
+  .btn-edit:hover{background:linear-gradient(135deg,#1E5FCC 0%,#2979FF 100%);}
+  .btn-delete{background:none;border:1px solid var(--border);color:var(--expense);border-radius:10px;padding:12px 14px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:700;}
+  
+  .bill-card{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+  .bill-card.overdue{border-color:var(--overdue);background:linear-gradient(135deg,rgba(255,59,48,0.08),rgba(255,59,48,0.15));}
+  .bill-card.paid-cycle{opacity:0.85;border-color:var(--money);background:linear-gradient(135deg,rgba(0,200,83,0.05),rgba(0,200,83,0.1));}
+  .bill-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;}
+  .bill-card-name{font-size:15px;font-weight:700;color:var(--text);}
+  .bill-card-amount{font-family:'Sora',sans-serif;font-size:17px;font-weight:800;color:var(--money-neon);}
+  .bill-card.overdue .bill-card-amount{color:var(--overdue);}
+  .bill-card-details{font-size:12.5px;color:var(--text-muted);margin-bottom:10px;display:flex;flex-direction:column;gap:3px;font-weight:500;}
+  .bill-card-actions{display:flex;gap:8px;}
+  
+  .work-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:14px;}
+  .work-label{color:var(--text-muted);font-weight:600;}
+  .work-value{font-family:'Sora',sans-serif;font-weight:800;font-size:15px;}
+  .work-value.pos{color:var(--money-neon);}
+  .work-divider{border-top:1px solid var(--border);margin:14px 0;}
+  .highlight-box{background:linear-gradient(135deg,rgba(0,200,83,0.15),rgba(0,230,118,0.05));border:1px solid var(--money);border-radius:12px;padding:14px;text-align:center;margin-top:12px;}
+  .highlight-box .big{font-family:'Sora',sans-serif;font-weight:800;font-size:24px;color:var(--money-neon);}
+  .highlight-box .label{font-size:11px;color:var(--text-muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;}
+  .highlight-box.neg{background:linear-gradient(135deg,rgba(255,59,48,0.15),rgba(255,107,107,0.05));border-color:var(--expense);}
+  .highlight-box.neg .big{color:var(--expense);}
+  
+  .empty{text-align:center;color:var(--text-muted);font-size:13px;font-weight:600;padding:20px 10px;border:2px dashed var(--border);border-radius:10px;}
+  .loading{text-align:center;color:var(--text-muted);font-size:13px;font-weight:600;padding:16px;}
+  .skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,#333333 50%,var(--surface-2) 75%);background-size:200% 100%;animation:skeleton-pulse 1.5s ease-in-out infinite;border-radius:8px;height:14px;margin-bottom:8px;}
+  .skeleton-title{height:20px;width:60%;margin-bottom:12px;}
+  @keyframes skeleton-pulse{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+  
+  .auth-wrap{max-width:400px;margin:40px auto 0;}
+  .auth-tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--surface-2);border-radius:10px;padding:4px;}
+  .auth-tabs button{flex:1;background:transparent;border:none;color:var(--text-muted);padding:12px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;font-family:'Sora',sans-serif;}
+  .auth-tabs button.active{background:var(--surface);color:var(--money-neon);box-shadow:0 2px 4px rgba(0,0,0,0.3);}
+  .auth-error{background:var(--expense-soft);border:1px solid var(--expense);color:var(--expense);font-size:13px;font-weight:600;padding:12px;border-radius:10px;margin-bottom:12px;}
+  .checkbox-label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;padding:8px 0;cursor:pointer;}
+  .checkbox-label input{width:20px;height:20px;accent-color:var(--money);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  
+  .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;backdrop-filter:blur(4px);overflow-y:auto;}
+  .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.6);}
+  .modal-icon{font-size:44px;margin-bottom:14px;}
+  .modal-title{font-family:'Sora',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px;color:var(--text);}
+  .modal-message{font-size:14px;color:var(--text-muted);margin-bottom:22px;font-weight:500;line-height:1.5;}
+  .modal-actions{display:flex;gap:10px;}
+  .modal-btn{flex:1;padding:14px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;font-family:'Sora',sans-serif;border:none;}
+  .modal-btn.cancel{background:var(--surface-2);color:var(--text);border:1px solid var(--border);}
+  .modal-btn.confirm{background:linear-gradient(135deg,#00E676 0%,#00B248 100%);color:#0F0F0F;}
+  .modal-btn.danger{background:linear-gradient(135deg,#FF3B30 0%,#C62828 100%);color:#fff;}
+  .modal-btn.primary{background:linear-gradient(135deg,#00E676 0%,#00B248 100%);color:#0F0F0F;}
+  
+  .spinner{width:18px;height:18px;border:3px solid rgba(0,0,0,0.2);border-top-color:#0F0F0F;border-radius:50%;animation:spin 0.6s linear infinite;display:inline-block;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  
+  .header-center{text-align:center;padding:30px 0 20px;}
+  .header-center .eyebrow{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--money-neon);margin:0 0 6px;font-weight:700;}
+  .header-center h1{font-family:'Sora',sans-serif;font-weight:800;font-size:40px;margin:0;letter-spacing:-0.02em;background:linear-gradient(135deg,#00E676 0%,#00C853 50%,#2979FF 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .header-center .sub{color:var(--text-muted);font-size:13.5px;margin:8px 0 0;font-weight:500;}
+  
+  .pricing-card{text-align:center;padding:28px 20px;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+  .pricing-price{font-family:'Sora',sans-serif;font-size:40px;font-weight:800;color:var(--money-neon);}
+  .pricing-period{font-size:14px;color:var(--text-muted);font-weight:600;}
+  .pricing-features{list-style:none;padding:0;margin:16px 0;text-align:left;}
+  .pricing-features li{padding:8px 0;font-size:14px;font-weight:600;color:var(--text);}
+  .pricing-features li::before{content:"✓";color:var(--money);font-weight:800;margin-right:8px;}
+  .pricing-badge{font-size:11px;font-weight:800;color:#0F0F0F;background:linear-gradient(135deg,#FFB800,#FF6B00);padding:4px 12px;border-radius:99px;display:inline-block;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;}
+  .pricing-save{font-size:13px;color:var(--money-neon);font-weight:700;margin-top:4px;}
+  
+  .salary-mini{background:linear-gradient(135deg,#00695C 0%,#00C853 100%);border-radius:16px;padding:18px;margin-bottom:16px;color:#0F0F0F;}
+  .salary-mini .label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;opacity:0.8;}
+  .salary-mini .value{font-family:'Sora',sans-serif;font-size:26px;font-weight:800;margin-top:4px;}
+  .salary-mini .detail{font-size:12px;font-weight:600;margin-top:4px;opacity:0.8;}
+  
+  .km-card{background:linear-gradient(135deg,#00695C,#00C853);border-radius:16px;padding:18px;margin-bottom:14px;color:#0F0F0F;}
+  .km-card.warning{background:linear-gradient(135deg,#B45309,#F59E0B);}
+  .km-card.danger{background:linear-gradient(135deg,#991B1B,#EF4444);color:#fff;}
+  .km-label{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;opacity:0.8;}
+  .km-value{font-family:'Sora',sans-serif;font-size:32px;font-weight:800;margin-top:4px;}
+  .km-detail{font-size:12px;font-weight:700;margin-top:4px;opacity:0.9;}
+  
+  .team-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;}
+  .team-name{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;}
+  .team-sub{font-size:12px;color:var(--text-muted);margin-top:2px;font-weight:500;}
+  .team-net{font-family:'Sora',sans-serif;font-weight:800;font-size:15px;}
+  
+  .chart-bars{display:flex;align-items:flex-end;gap:6px;height:100px;margin-top:14px;}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .bar{width:100%;max-width:30px;background:linear-gradient(180deg,#00E676,#00C853);border-radius:4px 4px 0 0;min-height:2px;}
+  .bar.neg{background:linear-gradient(180deg,#FF6B6B,#FF3B30);}
+  .bar-day{font-size:10px;color:var(--text-muted);margin-top:5px;text-transform:uppercase;font-weight:700;}
+  .plat-row{display:flex;align-items:center;gap:10px;margin-top:12px;}
+  .plat-name{width:80px;font-size:13px;color:var(--text-muted);flex-shrink:0;font-weight:700;}
+  .plat-track{flex:1;height:10px;background:var(--surface-2);border-radius:99px;overflow:hidden;}
+  .plat-fill{height:100%;background:linear-gradient(90deg,#00C853,#00E676);border-radius:99px;}
+  .plat-fill.lead{background:linear-gradient(90deg,#00E676,#00FF88);}
+  .plat-value{width:80px;text-align:right;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;}
+  
+  .odo-digits{display:flex;align-items:baseline;gap:3px;flex-wrap:wrap;justify-content:center;}
+  .odo-currency{font-family:'Sora',sans-serif;font-weight:700;font-size:20px;color:var(--text-muted);margin-right:3px;}
+  .odo-digit{font-family:'Sora',sans-serif;font-weight:800;font-size:36px;background:var(--surface-2);border-radius:8px;padding:4px 10px;min-width:28px;text-align:center;color:var(--money-neon);}
+  .odo-toggle{display:flex;gap:3px;}
+  .odo-toggle button{font-size:10px;background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:700;}
+  .odo-toggle button.active{background:var(--money);border-color:var(--money);color:#0F0F0F;}
+  
+  .summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+  .stat-box{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;}
+  .stat-box-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;font-weight:700;}
+  .stat-box-value{font-family:'Sora',sans-serif;font-weight:800;font-size:18px;}
+  .stat-box-value.pos{color:var(--money-neon);}
+
+  .day-record{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+  .day-record-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;}
+  .day-record-title{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;}
+  .day-record-total{font-family:'Sora',sans-serif;font-size:16px;font-weight:800;}
+  .day-record-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12.5px;font-weight:600;margin-bottom:10px;}
+  .day-record-grid span{color:var(--text-muted);}
+  .day-record-grid strong{color:var(--text);font-weight:700;}
+  .day-summary{background:linear-gradient(135deg,rgba(0,200,83,0.12),rgba(0,230,118,0.04));border:1px solid var(--money);border-radius:12px;padding:14px;margin-top:12px;}
+  .day-summary-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px;}
+  .day-summary-row:last-child{margin-bottom:0;}
+  .day-summary-row .lbl{color:var(--text-muted);font-weight:600;}
+  .day-summary-row .val{font-family:'Sora',sans-serif;font-weight:800;font-size:14px;}
+
+  .tabs{display:flex;gap:6px;background:var(--surface-2);border-radius:10px;padding:4px;margin-bottom:14px;}
+  .tabs button{flex:1;background:transparent;border:none;color:var(--text-muted);padding:10px;border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:'Sora',sans-serif;}
+  .tabs button.active{background:var(--money);color:#0F0F0F;}
+
+  .pie-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .pie-svg{flex-shrink:0;}
+  .pie-legend{flex:1;min-width:140px;}
+  .pie-legend-row{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;margin-bottom:6px;}
+  .pie-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .pie-legend-name{flex:1;color:var(--text-muted);}
+  .pie-legend-val{font-family:'Sora',sans-serif;font-weight:800;}
+
+  .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px;}
+  .cal-day{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--surface-2);color:var(--text-muted);}
+  .cal-day.empty{background:transparent;}
+  .cal-day.green{background:rgba(0,200,83,0.3);color:var(--money-neon);}
+  .cal-day.yellow{background:rgba(255,184,0,0.3);color:var(--warning);}
+  .cal-day.red{background:rgba(255,59,48,0.35);color:var(--expense);}
+  .cal-day.today{outline:2px solid var(--money-neon);}
+  .cal-weekday{font-size:9.5px;text-align:center;color:var(--text-muted);font-weight:700;text-transform:uppercase;}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:6px 12px;font-size:12px;font-weight:700;margin:0 6px 6px 0;}
+  .badge.earned{background:linear-gradient(135deg,rgba(0,200,83,0.2),rgba(0,230,118,0.08));border-color:var(--money);color:var(--money-neon);}
+  .badge.locked{opacity:0.4;}
+
+  .streak-box{background:linear-gradient(135deg,rgba(255,184,0,0.15),rgba(255,107,0,0.05));border:1px solid var(--warning);border-radius:12px;padding:16px;text-align:center;margin-bottom:14px;}
+  .streak-num{font-family:'Sora',sans-serif;font-size:38px;font-weight:800;color:var(--warning);}
+  .streak-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.06em;margin-top:2px;}
+
+  .rule-row{margin-bottom:10px;}
+  .rule-header{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;margin-bottom:4px;}
+  .rule-track{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden;}
+  .rule-fill{height:100%;border-radius:99px;}
+  .rule-fill.need{background:linear-gradient(90deg,#FF6B6B,#FF3B30);}
+  .rule-fill.want{background:linear-gradient(90deg,#FFB800,#FF6B00);}
+  .rule-fill.save{background:linear-gradient(90deg,#00C853,#00E676);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-icon" id="modalIcon">⚠️</div>
+      <div class="modal-title" id="modalTitle">Confirmar</div>
+      <div class="modal-message" id="modalMessage">Tem certeza?</div>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="authScreen" class="auth-wrap">
+    <div class="header-center">
+      <p class="eyebrow">Gestão Financeira</p>
+      <h1>Giro</h1>
+      <p class="sub">Organize suas finanças de forma inteligente.</p>
+    </div>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="active">Entrar</button>
+      <button id="tabSignup">Criar conta</button>
+    </div>
+    <div id="authError" class="auth-error hidden"></div>
+    <div class="card">
+      <div class="field"><label for="authName">Nome completo</label><input type="text" id="authName" placeholder="Seu nome"></div>
+      <div class="field"><label for="authPin">Senha (6 dígitos)</label><input type="password" id="authPin" placeholder="••••••" inputmode="numeric" maxlength="6"><div class="hint">Crie uma senha numérica de 6 dígitos.</div></div>
+      <div id="signupExtra" class="hidden">
+        <div class="field">
+          <label>Perfil de renda</label>
+          <label class="checkbox-label"><input type="checkbox" id="authIsDriver"> Atuo como motorista de aplicativo</label>
+          <label class="checkbox-label"><input type="checkbox" id="authHasSalary"> Possuo renda fixa mensal</label>
+        </div>
+        <div class="field hidden" id="salaryField">
+          <label for="authSalary">Renda mensal (R$)</label>
+          <input type="text" id="authSalary" placeholder="R$ 0,00" inputmode="decimal" class="money-mask">
+        </div>
+        <div class="field hidden" id="paydayField">
+          <label for="authPayday">Dia do recebimento</label>
+          <input type="number" id="authPayday" min="1" max="31" value="5">
+        </div>
+      </div>
+      <button class="btn-primary" id="authSubmit">Entrar</button>
+    </div>
+  </div>
+
+  <!-- TELA DE ASSINATURA -->
+  <div id="pricingScreen" class="hidden">
+    <div class="header-center">
+      <p class="eyebrow">Giro Premium</p>
+      <h1>Planos</h1>
+      <p class="sub">Acesso completo a todas as funcionalidades.</p>
+    </div>
+    <div class="pricing-card">
+      <div class="pricing-price">R$ 14,99</div>
+      <div class="pricing-period">por mês</div>
+      <ul class="pricing-features">
+        <li>Gestão financeira completa</li>
+        <li>Contas e vencimentos</li>
+        <li>Projeção de receita</li>
+        <li>Histórico completo</li>
+      </ul>
+      <button class="btn-primary" id="btnSubscribeMonthly">Plano mensal</button>
+    </div>
+    <div class="pricing-card" style="border-color:var(--warning);">
+      <div class="pricing-badge">Recomendado</div>
+      <div class="pricing-price" style="color:var(--warning);">R$ 34,99</div>
+      <div class="pricing-period">por 3 meses</div>
+      <div class="pricing-save">Economize R$ 9,98</div>
+      <ul class="pricing-features">
+        <li>Todos os recursos do mensal</li>
+        <li>Economia de 22%</li>
+        <li>Planejamento trimestral</li>
+      </ul>
+      <button class="btn-primary" id="btnSubscribeQuarterly" style="background:linear-gradient(135deg,#FFB800 0%,#FF6B00 100%);color:#0F0F0F;">Plano trimestral</button>
+    </div>
+    <button class="btn-primary" id="btnCheckPayment" style="background:linear-gradient(135deg,#00C853 0%,#00E676 100%);margin-top:10px;">Já realizei o pagamento</button>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-muted);text-align:center;font-weight:600;">Pagamento via PIX ou Cartão</div>
+    <button class="btn-small" id="btnBackToApp" style="width:100%;margin-top:8px;padding:12px;">Voltar</button>
+    <button class="btn-small" id="btnLogoutFromPricing" style="width:100%;margin-top:6px;padding:12px;">Sair</button>
+  </div>
+
+  <!-- APP -->
+  <div id="appScreen" class="hidden">
+    
+    <div class="app-header">
+      <div>
+        <div class="greeting">Olá,</div>
+        <div class="greeting-name" id="userNameLabel">Usuário</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="btnTeam" title="Equipe">👥</button>
+        <button class="btn-icon" id="btnAdmin" title="Admin">⚙️</button>
+        <button class="btn-icon" id="btnInstallApp" title="Instalar App">📲</button>
+        <button class="btn-icon" id="btnLogout" title="Sair">🚪</button>
+      </div>
+    </div>
+
+    <div id="trialBanner" class="trial-banner hidden">
+      <div style="font-size:12px;font-weight:700;color:var(--warning);"><span id="trialText">Período de avaliação</span></div>
+      <button class="btn-small" id="btnSubscribeEarly" style="font-size:11px;padding:6px 12px;">Ver planos</button>
+    </div>
+
+    <div id="renewalBanner" class="renewal-banner hidden">
+      <div style="font-size:12px;font-weight:700;color:var(--expense);"><span id="renewalText">Assinatura vence em breve</span></div>
+      <button class="btn-small" id="btnRenewNow" style="font-size:11px;padding:6px 12px;">Renovar</button>
+    </div>
+
+    <div class="main-balance">
+      <div class="main-balance-label">Saldo disponível</div>
+      <div class="main-balance-value" id="mainBalanceValue">R$ 0,00</div>
+      <div class="main-balance-detail" id="mainBalanceDetail">Neste mês</div>
+      <div class="balance-extras" id="balanceExtras"></div>
+      <div id="dailyLimitAlert"></div>
+    </div>
+
+    <div id="salaryCard" class="salary-mini hidden">
+      <div class="label">Renda mensal</div>
+      <div class="value" id="salaryValue">R$ 0,00</div>
+      <div class="detail" id="salaryDetail">Recebimento: dia 5</div>
+    </div>
+
+    <div class="collapsible card-vermelho" id="cardContas">
+      <div class="collapsible-header" onclick="toggleCard('cardContas')">
+        <div class="left">
+          <div class="collapsible-icon">💳</div>
+          <div>
+            <div class="collapsible-title">Contas</div>
+            <div class="collapsible-sub" id="contasSub">Nenhuma conta</div>
+          </div>
+        </div>
+        <div class="collapsible-arrow">▼</div>
+      </div>
+      <div class="collapsible-body">
+        <button class="btn-primary" id="btnBills" style="margin-bottom:14px;">Gerenciar contas</button>
+        <div id="billsAlertList">
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="collapsible card-verde" id="cardRegistrar">
+      <div class="collapsible-header" onclick="toggleCard('cardRegistrar')">
+        <div class="left">
+          <div class="collapsible-icon">📝</div>
+          <div>
+            <div class="collapsible-title">Registrar dia</div>
+            <div class="collapsible-sub" id="registrarSub">Receitas e gastos do dia</div>
+          </div>
+        </div>
+        <div class="collapsible-arrow">▼</div>
+      </div>
+      <div class="collapsible-body">
+        <div id="driverSection">
+          <div class="field"><label for="fDate">Data</label><input type="date" id="fDate"></div>
+          
+          <div class="section-title receitas">💰 Receitas</div>
+          <div class="grid2">
+            <div class="field"><label for="fUber">Uber</label><input type="text" id="fUber" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+            <div class="field"><label for="f99">99</label><input type="text" id="f99" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label for="fIndrive">InDrive</label><input type="text" id="fIndrive" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+            <div class="field"><label for="fParticular">Particular</label><input type="text" id="fParticular" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+          </div>
+          
+          <div class="section-title gastos">💸 Gastos do dia</div>
+          <div class="grid2">
+            <div class="field"><label for="fFuel">Combustível</label><input type="text" id="fFuel" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+            <div class="field"><label for="fFood">Alimentação</label><input type="text" id="fFood" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label for="fHours">Horas</label><input type="number" id="fHours" placeholder="0" step="0.5" inputmode="decimal"></div>
+            <div class="field"><label for="fKm">Km rodados</label><input type="number" id="fKm" placeholder="0" step="1" inputmode="decimal"></div>
+          </div>
+          
+          <button class="btn-primary" id="btnSave"><span class="spinner hidden" id="saveSpinner"></span> Salvar registro</button>
+        </div>
+        
+        <div id="dailyExpensesSection" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+          <div class="section-title gastos">🛒 Gastos extras de hoje</div>
+          <div class="field"><label for="expenseDesc">Descrição</label><input type="text" id="expenseDesc" placeholder="Ex: Almoço, lanche, etc."></div>
+          <div class="grid2">
+            <div class="field"><label for="expenseAmount">Valor</label><input type="text" id="expenseAmount" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+            <div class="field"><label for="expenseCategory">Categoria</label><select id="expenseCategory"></select></div>
+          </div>
+          <button class="btn-primary" id="btnAddExpense" style="background:linear-gradient(135deg,#FF6B35 0%,#C62828 100%);color:#fff;"><span class="spinner hidden" id="expenseSpinner"></span> Adicionar gasto</button>
+          <button class="btn-small" id="btnManageCategories" style="width:100%;margin-top:8px;padding:10px;">⚙️ Gerenciar categorias</button>
+          <div id="dailyExpenseList" style="margin-top:14px;"></div>
+        </div>
+
+        <div id="todayRecordsSection" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+          <div class="section-title receitas">📋 Registros de hoje</div>
+          <div id="todayRecordsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="collapsible card-roxo" id="cardProjecao">
+      <div class="collapsible-header" onclick="toggleCard('cardProjecao')">
+        <div class="left">
+          <div class="collapsible-icon">📈</div>
+          <div>
+            <div class="collapsible-title">Projeção de receita</div>
+            <div class="collapsible-sub">Quanto preciso trabalhar</div>
+          </div>
+        </div>
+        <div class="collapsible-arrow">▼</div>
+      </div>
+      <div class="collapsible-body">
+        <div id="workPanelContent">
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="collapsible card-azul" id="cardResultado">
+      <div class="collapsible-header" onclick="toggleCard('cardResultado')">
+        <div class="left">
+          <div class="collapsible-icon">📊</div>
+          <div>
+            <div class="collapsible-title">Resultado</div>
+            <div class="collapsible-sub">Análise do mês</div>
+          </div>
+        </div>
+        <div class="collapsible-arrow">▼</div>
+      </div>
+      <div class="collapsible-body">
+        <div class="odo" style="margin:0 0 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);font-weight:700;" id="odoLabel">Resultado do mês</span>
+            <div class="odo-toggle">
+              <button data-range="week" id="btnWeek">SEM</button>
+              <button data-range="month" class="active" id="btnMonth">MÊS</button>
+              <button data-range="all" id="btnAll">TUDO</button>
+            </div>
+          </div>
+          <div class="odo-digits" id="odoDigits"><span class="odo-currency">R$</span></div>
+          <div style="margin-top:10px;font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;font-weight:600;">
+            <span>Receitas: <span style="color:var(--money-neon);font-weight:700;" id="odoGross">R$ 0,00</span></span>
+            <span>Despesas: <span style="color:var(--expense);font-weight:700;" id="odoExp">R$ 0,00</span></span>
+          </div>
+        </div>
+
+        <div class="summary-grid" id="summaryCards">
+          <div class="stat-box"><div class="stat-box-label">Resultado hoje</div><div class="stat-box-value pos" id="statToday">R$ 0,00</div></div>
+          <div class="stat-box"><div class="stat-box-label">Média R$/hora</div><div class="stat-box-value" id="statPerHour">R$ 0,00</div></div>
+          <div class="stat-box" style="grid-column:1/-1;">
+            <div class="stat-box-label">Objetivo diário</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+              <input type="number" id="fGoal" placeholder="0" step="10" inputmode="decimal" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:14px;font-weight:700;">
+            </div>
+            <div style="width:100%;height:8px;background:var(--surface);border-radius:99px;overflow:hidden;margin-top:8px;">
+              <div id="goalBarFill" style="height:100%;background:linear-gradient(90deg,#00C853,#00E676);border-radius:99px;transition:width .3s ease;width:0%;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-weight:600;" id="goalText">Defina um objetivo</div>
+          </div>
+        </div>
+
+        <div class="tabs" id="resultTabs">
+          <button data-tab="resumo" class="active">Resumo</button>
+          <button data-tab="calendario">Calendário</button>
+          <button data-tab="conquistas">Conquistas</button>
+        </div>
+
+        <div id="tabResumo">
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 8px;">Gastos por categoria</p>
+            <div id="pieChart" class="pie-wrap"></div>
+          </div>
+
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 8px;">Comparação com mês passado</p>
+            <div id="compareMonth"></div>
+          </div>
+
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 8px;">Regra 50 / 30 / 20</p>
+            <div id="rule5020"></div>
+          </div>
+
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 4px;">Últimos 7 dias</p>
+            <div class="chart-bars" id="chartBars"></div>
+          </div>
+
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 4px;">Por aplicativo</p>
+            <div id="platformBars"></div>
+          </div>
+
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 4px;">Análise por KM</p>
+            <div id="kmAnalysis">
+              <div class="skeleton"></div>
+              <div class="skeleton"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tabCalendario" class="hidden">
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 4px;" id="calTitle">Calendário</p>
+            <div class="calendar-grid" id="calendarWeekdays"></div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:12px;font-weight:600;display:flex;gap:12px;flex-wrap:wrap;">
+              <span><span style="display:inline-block;width:10px;height:10px;background:rgba(0,200,83,0.5);border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Gastou pouco</span>
+              <span><span style="display:inline-block;width:10px;height:10px;background:rgba(255,184,0,0.5);border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Médio</span>
+              <span><span style="display:inline-block;width:10px;height:10px;background:rgba(255,59,48,0.5);border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Muito</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="tabConquistas" class="hidden">
+          <div class="streak-box">
+            <div class="streak-num" id="streakNum">0</div>
+            <div class="streak-label">🔥 dias seguidos registrando</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-weight:600;" id="streakBest">Melhor: 0 dias</div>
+          </div>
+
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 8px;">🎯 Meta de economia</p>
+            <div class="field"><label for="savingsGoalInput">Quanto quer guardar esse mês?</label><input type="text" id="savingsGoalInput" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:8px;">
+              <span style="color:var(--text-muted);" id="savingsProgressLabel">R$ 0,00 / R$ 0,00</span>
+              <span style="color:var(--money-neon);" id="savingsProgressPct">0%</span>
+            </div>
+            <div class="rule-track" style="margin-top:6px;"><div class="rule-fill save" id="savingsBar" style="width:0%;"></div></div>
+          </div>
+
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 8px;">🏆 Conquistas</p>
+            <div id="badgesList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PLANEJAR ===== -->
+    <div class="collapsible card-verde" id="cardPlanejar">
+      <div class="collapsible-header" onclick="toggleCard('cardPlanejar')">
+        <div class="left">
+          <div class="collapsible-icon">🎯</div>
+          <div>
+            <div class="collapsible-title">Planejar</div>
+            <div class="collapsible-sub" id="planejarSub">Metas e semana</div>
+          </div>
+        </div>
+        <div class="collapsible-arrow">▼</div>
+      </div>
+      <div class="collapsible-body">
+
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+          <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 12px;">🎯 Preciso de quanto?</p>
+
+          <div class="field">
+            <label for="planName">Nome do plano</label>
+            <input type="text" id="planName" placeholder="Ex: Pagar cartão, Viagem, Conserto...">
+          </div>
+
+          <div class="field">
+            <label for="planAmount">Quanto preciso?</label>
+            <input type="text" id="planAmount" placeholder="R$ 0,00" inputmode="decimal" class="money-mask">
+          </div>
+
+          <div class="field">
+            <label for="planDays">Em quanto tempo?</label>
+            <select id="planDays">
+              <option value="1">1 dia</option>
+              <option value="2" selected>2 dias</option>
+              <option value="3">3 dias</option>
+              <option value="7">1 semana</option>
+              <option value="15">15 dias</option>
+              <option value="30">1 mês</option>
+              <option value="custom">Personalizado (escolher data)</option>
+            </select>
+          </div>
+
+          <div class="field hidden" id="planCustomDateField">
+            <label for="planEndDate">Data final</label>
+            <input type="date" id="planEndDate">
+          </div>
+
+          <button class="btn-primary" id="btnCalcPlan"><span class="spinner hidden" id="calcSpinner"></span> Calcular</button>
+
+          <div id="planCalcResult" style="margin-top:14px;"></div>
+        </div>
+
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+          <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 12px;">📅 Planejar semana</p>
+
+          <div class="field">
+            <label for="weekTotal">Total da semana (R$)</label>
+            <input type="text" id="weekTotal" placeholder="R$ 0,00" inputmode="decimal" class="money-mask">
+          </div>
+
+          <div class="grid2">
+            <button class="btn-small" id="btnDistributeEven" style="padding:12px;">Distribuir igual</button>
+            <button class="btn-small" id="btnClearWeek" style="padding:12px;">Limpar</button>
+          </div>
+
+          <div id="weekDaysGrid" style="margin-top:14px;"></div>
+
+          <button class="btn-primary" id="btnSaveWeek" style="margin-top:12px;"><span class="spinner hidden" id="weekSpinner"></span> Salvar semana</button>
+
+          <div id="weekProgress" style="margin-top:14px;"></div>
+        </div>
+
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <p style="font-family:'Sora',sans-serif;font-weight:700;font-size:15px;margin:0 0 12px;">📋 Meus planos</p>
+          <div id="plansList">
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="collapsible card-cinza" id="cardHistorico">
+      <div class="collapsible-header" onclick="toggleCard('cardHistorico')">
+        <div class="left">
+          <div class="collapsible-icon">📋</div>
+          <div>
+            <div class="collapsible-title">Histórico</div>
+            <div class="collapsible-sub">Atividades e pagamentos</div>
+          </div>
+        </div>
+        <div class="collapsible-arrow">▼</div>
+      </div>
+      <div class="collapsible-body">
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn-small" id="histAtividades" style="flex:1;background:var(--money);color:#0F0F0F;border:none;">Atividades</button>
+          <button class="btn-small" id="histPagamentos" style="flex:1;">Pagamentos</button>
+        </div>
+        <div id="activityHistoryList">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+        <div id="paymentsHistoryList" class="hidden">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONTAS -->
+  <div id="billsScreen" class="hidden">
+    <div class="app-header">
+      <div>
+        <div class="greeting">Gerenciar</div>
+        <div class="greeting-name">Contas</div>
+      </div>
+      <button class="btn-icon" id="btnBackFromBills">←</button>
+    </div>
+
+    <div class="collapsible card-verde open" id="cardAddBill">
+      <div class="collapsible-header" onclick="toggleCard('cardAddBill')">
+        <div class="left">
+          <div class="collapsible-icon">➕</div>
+          <div>
+            <div class="collapsible-title">Adicionar conta</div>
+          </div>
+        </div>
+        <div class="collapsible-arrow">▼</div>
+      </div>
+      <div class="collapsible-body">
+        <div class="field"><label for="billName">Descrição</label><input type="text" id="billName" placeholder="Ex: Aluguel, Cartão, etc."></div>
+        <div class="field"><label for="billAmount">Valor</label><input type="text" id="billAmount" placeholder="R$ 0,00" inputmode="decimal" class="money-mask"></div>
+        <div class="field"><label for="billFrequency">Frequência</label><select id="billFrequency"><option value="daily">Diária</option><option value="weekly">Semanal</option><option value="monthly" selected>Mensal</option></select></div>
+        <div class="field" id="billDueDayField">
+          <label for="billDueDay">Dia do vencimento</label>
+          <input type="number" id="billDueDay" placeholder="15" min="1" max="31">
+          <label class="checkbox-label" style="margin-top:8px;">
+            <input type="checkbox" id="billUseSpecificMonth"> Definir mês/ano do primeiro vencimento
+          </label>
+        </div>
+        <div class="field hidden" id="billMonthYearField">
+          <label>Mês e Ano do primeiro vencimento</label>
+          <div class="grid2">
+            <select id="billMonth">
+              <option value="1">Janeiro</option>
+              <option value="2">Fevereiro</option>
+              <option value="3">Março</option>
+              <option value="4">Abril</option>
+              <option value="5">Maio</option>
+              <option value="6">Junho</option>
+              <option value="7">Julho</option>
+              <option value="8">Agosto</option>
+              <option value="9">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+            <select id="billYear">
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+              <option value="2028">2028</option>
+              <option value="2029">2029</option>
+              <option value="2030">2030</option>
+              <option value="2031">2031</option>
+              <option value="2032">2032</option>
+            </select>
+          </div>
+          <div class="hint">Se não definir, o sistema usa o mês atual.</div>
+        </div>
+        <div class="field hidden" id="billDueWeekdayField"><label for="billDueWeekday">Dia da semana</label><select id="billDueWeekday"><option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option><option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div>
+        <div class="field"><label for="billInstallments">Parcelas</label><input type="number" id="billInstallments" placeholder="1" min="1" max="120" value="1"><div class="hint">Deixe 1 se não for parcelado</div></div>
+        <button class="btn-primary" id="btnAddBill"><span class="spinner hidden" id="billSpinner"></span> Adicionar</button>
+      </div>
+    </div>
+
+    <div id="fixedBillsSection" class="hidden" style="margin-top:16px;">
+      <div class="section-title gastos">📌 Contas fixas do mês</div>
+      <div id="fixedBillsList"></div>
+    </div>
+
+    <div id="billsList" style="margin-top:16px;">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  </div>
+
+  <!-- EQUIPE -->
+  <div id="teamScreen" class="hidden">
+    <div class="app-header">
+      <div>
+        <div class="greeting">Visão geral</div>
+        <div class="greeting-name">Equipe</div>
+      </div>
+      <button class="btn-icon" id="btnBackApp">←</button>
+    </div>
+    <div id="teamList"><div class="loading">Carregando…</div></div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="adminScreen" class="hidden">
+    <div class="app-header">
+      <div>
+        <div class="greeting">Administração</div>
+        <div class="greeting-name">Painel Admin</div>
+      </div>
+      <button class="btn-icon" id="btnBackFromAdmin">←</button>
+    </div>
+    <div class="summary-grid" style="margin-bottom:16px;">
+      <div class="stat-box"><div class="stat-box-label">Total usuários</div><div class="stat-box-value" id="adminTotalUsers">0</div></div>
+      <div class="stat-box"><div class="stat-box-label">Premium</div><div class="stat-box-value pos" id="adminPremiumUsers">0</div></div>
+      <div class="stat-box"><div class="stat-box-label">Em teste</div><div class="stat-box-value" id="adminTrialUsers">0</div></div>
+      <div class="stat-box"><div class="stat-box-label">Receita mensal</div><div class="stat-box-value pos" id="adminRevenue">R$ 0,00</div></div>
+    </div>
+    <div id="adminUsersList"><div class="loading">Carregando…</div></div>
+  </div>
+
+</div>
+<script>
+const SUPA_URL = 'https://nslgwvjeheqsvjhwcckf.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zbGd3dmplaGVxc3ZqaHdjY2tmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1ODI5MjAsImV4cCI6MjEwMjE1ODkyMH0.Ntc5lYd_1JSUcnKCwz27QDiouBv0JbLW2Rt_IrNDNK4';
+
+const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+let currentUser = null;
+let entries = [];
+let bills = [];
+let dailyGoal = 0;
+let odoRange = 'month';
+let userCategories = [];
+let allDailyExpenses = [];
+let savingsGoal = 0;
+let currentPlans = [];
+let currentWeekGoals = [];
+
+const BASE_CATEGORIES = ['Mercado','Transporte','Lazer','Outros'];
+
+const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function currentMonthYear(){ return monthNames[new Date().getMonth()] + '/' + new Date().getFullYear(); }
+function todayISO(){ const d=new Date(); const tz=d.getTimezoneOffset()*60000; return new Date(d-tz).toISOString().slice(0,10); }
+function fmtBRL(n){ return 'R$ ' + (n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function parseLocalDate(iso){ const [y,m,d]=iso.split('-').map(Number); return new Date(y,m-1,d); }
+function slugName(name){ return name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
+function pinToEmail(name, pin){ return slugName(name) + '@giroapp.com'; }
+
+function toggleCard(cardId){
+  const card = document.getElementById(cardId);
+  if(card) card.classList.toggle('open');
+}
+
+function showModal(title, message, icon, buttons){
+  return new Promise((resolve) => {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMessage').textContent = message;
+    document.getElementById('modalIcon').textContent = icon || '⚠️';
+    const actionsEl = document.getElementById('modalActions');
+    actionsEl.innerHTML = '';
+    buttons.forEach(btn => {
+      const btnEl = document.createElement('button');
+      btnEl.className = 'modal-btn ' + btn.class;
+      btnEl.textContent = btn.label;
+      btnEl.addEventListener('click', () => {
+        document.getElementById('modalOverlay').classList.add('hidden');
+        resolve(btn.value);
+      });
+      actionsEl.appendChild(btnEl);
+    });
+    document.getElementById('modalOverlay').classList.remove('hidden');
+  });
+}
+function showAlert(title, message, icon){ return showModal(title, message, icon || 'ℹ️', [{ label: 'OK', value: 'ok', class: 'primary' }]); }
+function showConfirm(title, message, confirmLabel, danger){ return showModal(title, message, '⚠️', [{ label: 'Cancelar', value: false, class: 'cancel' }, { label: confirmLabel || 'Confirmar', value: true, class: danger ? 'danger' : 'confirm' }]); }
+
+function maskMoney(value){
+  let clean = value.replace(/\D/g, '');
+  if(clean === '') return 'R$ 0,00';
+  clean = (parseInt(clean) / 100).toFixed(2);
+  clean = clean.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return 'R$ ' + clean;
+}
+function unmaskMoney(value){
+  if(!value) return 0;
+  let clean = value.replace(/[R$\s.]/g, '').replace(',', '.');
+  return parseFloat(clean) || 0;
+}
+
+document.querySelectorAll('.money-mask').forEach(input => {
+  input.addEventListener('input', (e) => { e.target.value = maskMoney(e.target.value); });
+  input.addEventListener('focus', (e) => { if(e.target.value === '') e.target.value = 'R$ 0,00'; e.target.select(); });
+  input.addEventListener('blur', (e) => { if(unmaskMoney(e.target.value) === 0) e.target.value = ''; });
+});
+
+function showSpinner(btn, spinnerId){
+  const btnEl = typeof btn === 'string' ? document.getElementById(btn) : btn;
+  const spinner = document.getElementById(spinnerId);
+  if(btnEl) btnEl.disabled = true;
+  if(spinner) spinner.classList.remove('hidden');
+}
+function hideSpinner(btn, spinnerId){
+  const btnEl = typeof btn === 'string' ? document.getElementById(btn) : btn;
+  const spinner = document.getElementById(spinnerId);
+  if(btnEl) btnEl.disabled = false;
+  if(spinner) spinner.classList.add('hidden');
+}
+
+let authMode = 'login';
+document.getElementById('tabLogin').addEventListener('click', ()=>{ authMode='login'; document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabSignup').classList.remove('active'); document.getElementById('authSubmit').textContent='Entrar'; document.getElementById('signupExtra').classList.add('hidden'); });
+document.getElementById('tabSignup').addEventListener('click', ()=>{ authMode='signup'; document.getElementById('tabSignup').classList.add('active'); document.getElementById('tabLogin').classList.remove('active'); document.getElementById('authSubmit').textContent='Criar conta'; document.getElementById('signupExtra').classList.remove('hidden'); });
+
+document.getElementById('authHasSalary').addEventListener('change', (ev)=>{
+  document.getElementById('salaryField').classList.toggle('hidden', !ev.target.checked);
+  document.getElementById('paydayField').classList.toggle('hidden', !ev.target.checked);
+});
+
+function showAuthError(msg){ const el = document.getElementById('authError'); el.textContent = msg; el.classList.remove('hidden'); }
+function hideAuthError(){ document.getElementById('authError').classList.add('hidden'); }
+
+document.getElementById('authSubmit').addEventListener('click', async ()=>{
+  hideAuthError();
+  const name = document.getElementById('authName').value.trim();
+  const pin = document.getElementById('authPin').value.trim();
+  if(!name){ showAuthError('Informe seu nome.'); return; }
+  if(!/^\d{6}$/.test(pin)){ showAuthError('A senha deve ter 6 dígitos.'); return; }
+  const email = pinToEmail(name, pin);
+  const btn = document.getElementById('authSubmit');
+  btn.disabled = true;
+  
+  if(authMode === 'signup'){
+    const isDriver = document.getElementById('authIsDriver').checked;
+    const hasSalary = document.getElementById('authHasSalary').checked;
+    const monthlyIncome = hasSalary ? unmaskMoney(document.getElementById('authSalary').value) : 0;
+    const payday = hasSalary ? (parseInt(document.getElementById('authPayday').value) || 5) : 5;
+    
+    const trialEndsDate = new Date();
+    trialEndsDate.setDate(trialEndsDate.getDate() + 8);
+    
+    const { data, error } = await supa.auth.signUp({ email, password: pin });
+    if(error){ showAuthError(traduzErro(error.message)); btn.disabled=false; return; }
+    if(data.user){ 
+      const { error: updateError } = await supa.from('profiles').update({ 
+        name, is_driver: isDriver, has_salary: hasSalary, monthly_income: monthlyIncome, payday: payday, 
+        trial_started: new Date().toISOString(), trial_ends: trialEndsDate.toISOString(), payment_status: 'trial' 
+      }).eq('id', data.user.id);
+      if(updateError){ 
+        await supa.from('profiles').insert({ 
+          id: data.user.id, name, is_driver: isDriver, has_salary: hasSalary, monthly_income: monthlyIncome, payday: payday, 
+          trial_started: new Date().toISOString(), trial_ends: trialEndsDate.toISOString(), payment_status: 'trial' 
+        }); 
+      }
+    }
+    await finishLogin();
+  }else{
+    const { data, error } = await supa.auth.signInWithPassword({ email, password: pin });
+    if(error){ showAuthError('Credenciais inválidas.'); btn.disabled=false; return; }
+    await finishLogin();
+  }
+  btn.disabled = false;
+});
+
+function traduzErro(msg){
+  if(msg.includes('already registered')) return 'Conta já existente. Utilize a opção "Entrar".';
+  if(msg.includes('Password')) return 'Senha inválida.';
+  return 'Erro: ' + msg;
+}
+
+async function finishLogin(){
+  const { data:{ user } } = await supa.auth.getUser();
+  if(!user) return;
+  let { data: profile } = await supa.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if(!profile){
+    const name = document.getElementById('authName').value.trim() || 'Usuário';
+    const trialEndsDate = new Date();
+    trialEndsDate.setDate(trialEndsDate.getDate() + 8);
+    const { data: newProfile } = await supa.from('profiles').upsert({ 
+      id: user.id, name, trial_started: new Date().toISOString(), trial_ends: trialEndsDate.toISOString(), payment_status: 'trial' 
+    }).select().maybeSingle();
+    profile = newProfile;
+  }
+  if(!profile){ profile = { name: 'Usuário', is_admin: false, is_driver: false, has_salary: false, monthly_income: 0, payday: 5 }; }
+  
+  currentUser = { 
+    id: user.id, name: profile.name || 'Usuário', is_admin: !!profile.is_admin, is_premium: !!profile.is_premium, 
+    is_driver: !!profile.is_driver, has_salary: !!profile.has_salary, monthly_income: Number(profile.monthly_income) || 0, 
+    payday: profile.payday || 5, subscription_expires: profile.subscription_expires, trial_ends: profile.trial_ends, 
+    payment_status: profile.payment_status,
+    streak_current: Number(profile.streak_current) || 0,
+    streak_best: Number(profile.streak_best) || 0,
+    last_entry_date: profile.last_entry_date,
+    badges: Array.isArray(profile.badges) ? profile.badges : []
+  };
+  savingsGoal = Number(profile.savings_goal) || 0;
+  
+  let daysLeft = 0;
+  if(profile.trial_ends){
+    const trialEnd = new Date(profile.trial_ends);
+    const now = new Date();
+    const diffMs = trialEnd.getTime() - now.getTime();
+    daysLeft = Math.ceil(diffMs / (1000*60*60*24));
+  }
+  
+  document.getElementById('userNameLabel').textContent = currentUser.name;
+  document.getElementById('btnTeam').classList.toggle('hidden', !currentUser.is_admin);
+  document.getElementById('btnAdmin').classList.toggle('hidden', !currentUser.is_admin);
+  document.getElementById('authScreen').classList.add('hidden');
+  
+  const renewalBanner = document.getElementById('renewalBanner');
+  if(profile.is_premium && profile.subscription_expires){
+    const expires = new Date(profile.subscription_expires);
+    const daysUntilExpiry = Math.ceil((expires.getTime() - new Date().getTime()) / (1000*60*60*24));
+    if(daysUntilExpiry <= 3 && daysUntilExpiry > 0){
+      renewalBanner.classList.remove('hidden');
+      document.getElementById('renewalText').textContent = 'Assinatura vence em ' + daysUntilExpiry + ' dia(s)!';
+    } else if(daysUntilExpiry <= 0){
+      await supa.from('profiles').update({ is_premium: false, payment_status: 'expired' }).eq('id', currentUser.id);
+      document.getElementById('appScreen').classList.add('hidden');
+      document.getElementById('pricingScreen').classList.remove('hidden');
+      return;
+    } else { renewalBanner.classList.add('hidden'); }
+  } else { renewalBanner.classList.add('hidden'); }
+  
+  if(profile.is_premium){
+    document.getElementById('trialBanner').classList.add('hidden');
+    document.getElementById('appScreen').classList.remove('hidden');
+  }else if(daysLeft > 0){
+    document.getElementById('trialBanner').classList.remove('hidden');
+    document.getElementById('trialText').textContent = 'Teste · ' + daysLeft + ' dia(s) restantes';
+    document.getElementById('appScreen').classList.remove('hidden');
+  }else{
+    document.getElementById('appScreen').classList.add('hidden');
+    document.getElementById('pricingScreen').classList.remove('hidden');
+    return;
+  }
+  
+  if(currentUser.is_driver){
+    document.getElementById('driverSection').classList.remove('hidden');
+  } else {
+    document.getElementById('driverSection').classList.add('hidden');
+  }
+
+  const cardProjecao = document.getElementById('cardProjecao');
+  if(cardProjecao){
+    if(currentUser.has_salary && !currentUser.is_driver){
+      cardProjecao.classList.add('hidden');
+    } else {
+      cardProjecao.classList.remove('hidden');
+    }
+  }
+  
+  if(currentUser.has_salary && currentUser.monthly_income > 0){
+    document.getElementById('salaryCard').classList.remove('hidden');
+    document.getElementById('salaryValue').textContent = fmtBRL(currentUser.monthly_income);
+    document.getElementById('salaryDetail').textContent = 'Recebimento: dia ' + currentUser.payday;
+  } else {
+    document.getElementById('salaryCard').classList.add('hidden');
+  }
+  
+  await loadCategories();
+  await loadGoal();
+  await loadEntries();
+  await loadBills();
+  await loadDailyExpenses();
+  await loadSavingsGoal();
+  await loadPlans();
+  await loadWeekGoals();
+}
+
+document.getElementById('btnRenewNow').addEventListener('click', ()=>{ document.getElementById('appScreen').classList.add('hidden'); document.getElementById('pricingScreen').classList.remove('hidden'); });
+document.getElementById('btnLogout').addEventListener('click', async ()=>{ await supa.auth.signOut(); location.reload(); });
+document.getElementById('btnLogoutFromPricing').addEventListener('click', async ()=>{ await supa.auth.signOut(); location.reload(); });
+document.getElementById('btnSubscribeEarly').addEventListener('click', ()=>{ document.getElementById('appScreen').classList.add('hidden'); document.getElementById('pricingScreen').classList.remove('hidden'); });
+document.getElementById('btnBackToApp').addEventListener('click', ()=>{ document.getElementById('pricingScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); });
+
+// ============ PAGAMENTO ============
+const FUNCTIONS_URL = SUPA_URL + '/functions/v1';
+
+async function getAuthHeader(){
+  const { data:{ session } } = await supa.auth.getSession();
+  if(!session) throw new Error('Sem sessão');
+  return { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' };
+}
+
+async function createPayment(plan){
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Processando...';
+  try {
+    const headers = await getAuthHeader();
+    const response = await fetch(FUNCTIONS_URL + '/criar-pagamento', { method: 'POST', headers, body: JSON.stringify({ plan }) });
+    const data = await response.json();
+    if(data.init_point){ window.location.href = data.init_point; return; }
+    await showAlert('Erro', data.error || 'Erro ao processar pagamento.', '❌');
+  } catch(err){ console.error(err); await showAlert('Erro', 'Erro de conexão com o servidor.', '❌'); }
+  btn.disabled = false; btn.textContent = originalText;
+}
+document.getElementById('btnSubscribeMonthly').addEventListener('click', () => createPayment('mensal'));
+document.getElementById('btnSubscribeQuarterly').addEventListener('click', () => createPayment('trimestral'));
+
+document.getElementById('btnCheckPayment').addEventListener('click', async ()=>{
+  const btn = document.getElementById('btnCheckPayment');
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  try {
+    const headers = await getAuthHeader();
+    const response = await fetch(FUNCTIONS_URL + '/verificar-pagamento', { method: 'POST', headers });
+    const data = await response.json();
+    if(data.status === 'aprovado'){ await showAlert('Sucesso', 'Pagamento confirmado! Premium liberado.', '✅'); location.reload(); return; }
+    else if(data.status === 'nao_encontrado'){ await showAlert('Atenção', 'Nenhum pagamento encontrado. Se você acabou de pagar, aguarde 10 segundos e tente novamente.', '⚠️'); }
+    else if(data.status === 'pending'){ await showAlert('Aguardando', 'Pagamento em processamento. Assim que for aprovado, o Premium é liberado automaticamente.', '⏳'); }
+    else if(data.status === 'rejected'){ await showAlert('Recusado', 'O pagamento foi recusado. Tente novamente.', '❌'); }
+    else { await showAlert('Atenção', data.error || ('Status: ' + (data.status || 'desconhecido')), '⚠️'); }
+  } catch(err){ console.error(err); await showAlert('Erro', 'Erro ao verificar pagamento.', '❌'); }
+  btn.disabled = false; btn.textContent = originalText;
+});
+
+(async function initSession(){
+  const urlParams = new URLSearchParams(window.location.search);
+  const pagamentoStatus = urlParams.get('pagamento');
+  if(pagamentoStatus){ window.history.replaceState({}, document.title, window.location.pathname); }
+  const { data:{ session } } = await supa.auth.getSession();
+  if(session){ await finishLogin(); }
+  if(pagamentoStatus === 'sucesso' && currentUser){
+    await new Promise(r => setTimeout(r, 2500));
+    try {
+      const headers = await getAuthHeader();
+      const response = await fetch(FUNCTIONS_URL + '/verificar-pagamento', { method: 'POST', headers });
+      const data = await response.json();
+      if(data.status === 'aprovado'){ await showAlert('Sucesso', 'Pagamento confirmado! Premium liberado.', '✅'); location.reload(); }
+    } catch(err){ console.error(err); }
+  }
+})();
+
+// ============ CARREGAR DADOS ============
+async function loadEntries(){
+  const { data, error } = await supa.from('entries').select('*').eq('user_id', currentUser.id).order('date', { ascending:false });
+  entries = error ? [] : data;
+  await updateStreak();
+  render();
+  renderWorkPanel();
+  renderTodayRecords();
+  renderResultTabs();
+  if (typeof renderWeekProgress === 'function') renderWeekProgress();
+}
+
+async function loadGoal(){
+  const { data } = await supa.from('goals').select('daily_goal').eq('user_id', currentUser.id).maybeSingle();
+  dailyGoal = data ? Number(data.daily_goal) || 0 : 0;
+  const fGoalEl = document.getElementById('fGoal');
+  if(fGoalEl) fGoalEl.value = dailyGoal || '';
+}
+
+async function loadSavingsGoal(){
+  document.getElementById('savingsGoalInput').value = savingsGoal ? fmtBRL(savingsGoal) : '';
+}
+
+document.getElementById('fGoal').addEventListener('change', async (ev)=>{
+  dailyGoal = parseFloat(ev.target.value) || 0;
+  await supa.from('goals').upsert({ user_id: currentUser.id, daily_goal: dailyGoal });
+  render();
+});
+
+document.getElementById('savingsGoalInput').addEventListener('change', async (ev)=>{
+  savingsGoal = unmaskMoney(ev.target.value);
+  await supa.from('profiles').update({ savings_goal: savingsGoal }).eq('id', currentUser.id);
+  renderAchievements();
+});
+
+// ============ CATEGORIAS ============
+async function loadCategories(){
+  const { data } = await supa.from('user_categories').select('name').eq('user_id', currentUser.id);
+  userCategories = (data || []).map(c => c.name);
+  renderCategorySelect();
+}
+
+function renderCategorySelect(){
+  const select = document.getElementById('expenseCategory');
+  const all = [...BASE_CATEGORIES, ...userCategories.filter(c => !BASE_CATEGORIES.includes(c))];
+  select.innerHTML = all.map(c => '<option value="' + c + '">' + c + '</option>').join('');
+}
+
+document.getElementById('btnManageCategories').addEventListener('click', async ()=>{
+  const name = prompt('Nome da nova categoria (ou vazio pra cancelar):');
+  if(!name || !name.trim()) return;
+  const clean = name.trim();
+  if(BASE_CATEGORIES.includes(clean) || userCategories.includes(clean)){
+    await showAlert('Atenção', 'Essa categoria já existe.', '⚠️');
+    return;
+  }
+  const { error } = await supa.from('user_categories').insert({ user_id: currentUser.id, name: clean });
+  if(error){ await showAlert('Erro', error.message, '❌'); return; }
+  await loadCategories();
+  await showAlert('Sucesso', 'Categoria adicionada!', '✅');
+});
+
+// ============ STREAK + BADGES ============
+async function updateStreak(){
+  const today = todayISO();
+  const dates = new Set(entries.map(e => e.date));
+  dates.add(today);
+  let streak = 0;
+  const d = new Date(); d.setHours(0,0,0,0);
+  while(true){
+    const iso = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    if(dates.has(iso)){ streak++; d.setDate(d.getDate() - 1); } else { break; }
+  }
+  if(streak > 0 && currentUser.last_entry_date !== today){
+    const best = Math.max(streak, currentUser.streak_best || 0);
+    await supa.from('profiles').update({ streak_current: streak, streak_best: best, last_entry_date: today }).eq('id', currentUser.id);
+    currentUser.streak_current = streak;
+    currentUser.streak_best = best;
+    currentUser.last_entry_date = today;
+  }
+  await checkBadges();
+}
+
+function computeBadges(){
+  const earned = new Set(currentUser.badges || []);
+  const all = [
+    { id:'first_entry', name:'Primeiro registro', icon:'🌱', check: () => entries.length > 0 },
+    { id:'week_streak', name:'7 dias seguidos', icon:'🔥', check: () => currentUser.streak_current >= 7 },
+    { id:'month_streak', name:'30 dias seguidos', icon:'💎', check: () => currentUser.streak_current >= 30 },
+    { id:'saver', name:'Economizou 20%', icon:'🏦', check: () => {
+      if(!currentUser.has_salary || currentUser.monthly_income <= 0) return false;
+      const mes = entries.filter(e => inRange(e.date, 'month'));
+      const gasto = mes.reduce((s,e) => s + (entryEarn(e) || 0) + Number(e.fuel||0) + Number(e.food||0), 0) + allDailyExpenses.filter(d => inRange(d.date,'month')).reduce((s,d) => s + Number(d.amount||0), 0);
+      return gasto > 0 && (gasto / currentUser.monthly_income) <= 0.8;
+    }},
+    { id:'no_overspend', name:'5 dias sem estourar', icon:'🎯', check: () => false },
+    { id:'goal_hit', name:'Meta diária batida', icon:'🏆', check: () => dailyGoal > 0 }
+  ];
+  return all.map(b => ({ ...b, earned: earned.has(b.id) }));
+}
+
+async function checkBadges(){
+  const badges = computeBadges();
+  const newEarned = badges.filter(b => !b.earned && b.check()).map(b => b.id);
+  if(newEarned.length > 0){
+    const updated = [...new Set([...(currentUser.badges || []), ...newEarned])];
+    await supa.from('profiles').update({ badges: updated }).eq('id', currentUser.id);
+    currentUser.badges = updated;
+  }
+}
+
+// ============ ENTRADAS ============
+async function addEntry(){
+  const date = document.getElementById('fDate').value || todayISO();
+  const uber = unmaskMoney(document.getElementById('fUber').value);
+  const n99 = unmaskMoney(document.getElementById('f99').value);
+  const indrive = unmaskMoney(document.getElementById('fIndrive').value);
+  const particular = unmaskMoney(document.getElementById('fParticular').value);
+  const fuel = unmaskMoney(document.getElementById('fFuel').value);
+  const food = unmaskMoney(document.getElementById('fFood').value);
+  const hours = parseFloat(document.getElementById('fHours').value) || 0;
+  const km = parseFloat(document.getElementById('fKm').value) || 0;
+  if(uber===0 && n99===0 && indrive===0 && particular===0 && fuel===0 && food===0) return;
+  
+  showSpinner('btnSave', 'saveSpinner');
+  const { error } = await supa.from('entries').insert({ user_id:currentUser.id, date, uber, n99, indrive, particular, fuel, food, hours, km });
+  hideSpinner('btnSave', 'saveSpinner');
+  
+  if(error){ await showAlert('Erro', error.message, '❌'); return; }
+  ['fUber','f99','fIndrive','fParticular','fFuel','fFood','fHours','fKm'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fDate').value = todayISO();
+  await loadEntries();
+  await loadDailyExpenses();
+  await showAlert('Sucesso', 'Registro salvo!', '✅');
+}
+
+async function deleteEntry(id){ 
+  const confirmed = await showConfirm('Excluir', 'Tem certeza?', 'Excluir', true);
+  if(!confirmed) return;
+  await supa.from('entries').delete().eq('id', id).eq('user_id', currentUser.id); 
+  await loadEntries(); 
+}
+
+function entryEarn(e){ return (e.uber||0)+(e.n99||0)+(e.indrive||0)+(e.particular||0); }
+function inRange(dateStr, range){
+  const d = parseLocalDate(dateStr); const now = new Date(); now.setHours(0,0,0,0);
+  if(range==='all') return true;
+  if(range==='week'){ const day=now.getDay(); const monday=new Date(now); monday.setDate(now.getDate()-((day+6)%7)); return d>=monday; }
+  if(range==='month'){ return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); }
+  return true;
+}
+
+// ============ GASTOS EXTRAS ============
+async function loadDailyExpenses(){
+  const today = todayISO();
+  const { data } = await supa.from('daily_expenses').select('*').eq('user_id', currentUser.id).order('date', { ascending:false });
+  allDailyExpenses = data || [];
+  const todayExpenses = allDailyExpenses.filter(e => e.date === today);
+  const listEl = document.getElementById('dailyExpenseList');
+  if(!listEl) return;
+  if(todayExpenses.length === 0){ listEl.innerHTML = '<div class="empty" style="padding:14px;">Nenhum gasto extra hoje.</div>'; }
+  else {
+    listEl.innerHTML = todayExpenses.map(e => '<div class="bill-card" style="margin-bottom:8px;"><div class="bill-card-header"><span class="bill-card-name" style="font-size:13px;">' + (e.description || '') + '</span><span class="bill-card-amount" style="color:var(--expense);font-size:15px;">' + fmtBRL(e.amount) + '</span></div><div class="bill-card-details" style="margin-bottom:6px;"><span>' + (e.category || 'Outros') + '</span></div><div class="bill-card-actions"><button class="btn-delete delete-expense-btn" data-id="' + e.id + '" style="padding:8px 12px;font-size:12px;">Excluir</button></div></div>').join('');
+    listEl.querySelectorAll('.delete-expense-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const confirmed = await showConfirm('Excluir gasto', 'Tem certeza?', 'Excluir', true);
+        if(!confirmed) return;
+        await supa.from('daily_expenses').delete().eq('id', btn.dataset.id);
+        await loadDailyExpenses(); await loadEntries(); await render();
+      });
+    });
+  }
+  renderResultTabs();
+}
+
+document.getElementById('btnAddExpense').addEventListener('click', async ()=>{
+  const description = document.getElementById('expenseDesc').value.trim();
+  const amount = unmaskMoney(document.getElementById('expenseAmount').value);
+  const category = document.getElementById('expenseCategory').value;
+  if(!description){ await showAlert('Atenção', 'Informe a descrição.', '⚠️'); return; }
+  if(amount <= 0){ await showAlert('Atenção', 'Informe o valor.', '⚠️'); return; }
+  showSpinner('btnAddExpense', 'expenseSpinner');
+  await supa.from('daily_expenses').insert({ user_id: currentUser.id, date: todayISO(), description, amount, category });
+  hideSpinner('btnAddExpense', 'expenseSpinner');
+  document.getElementById('expenseDesc').value = '';
+  document.getElementById('expenseAmount').value = '';
+  await loadDailyExpenses(); await loadEntries(); await render();
+  await showAlert('Sucesso', 'Gasto registrado!', '✅');
+});
+
+async function getDailyExpenseTotal(){
+  const today = todayISO();
+  return allDailyExpenses.filter(e => e.date === today).reduce((s,e) => s + Number(e.amount), 0);
+}
+
+function getMonthExpenseTotal(){
+  return allDailyExpenses.filter(e => inRange(e.date, 'month')).reduce((s,e) => s + Number(e.amount), 0);
+}
+
+// ============ RENDER — CARD TOPO ============
+async function render(){
+  const rangeEntries = entries.filter(e=>inRange(e.date, odoRange));
+  const gross = rangeEntries.reduce((s,e)=>s+entryEarn(e),0);
+  const exp = rangeEntries.reduce((s,e)=>s+Number(e.fuel)+Number(e.food),0);
+  const net = gross - exp;
+  
+  const dailyExpenseTotal = await getDailyExpenseTotal();
+  const monthExpenseTotal = getMonthExpenseTotal();
+  const monthBillsPaid = bills.filter(b => {
+    if(!b.last_paid_date) return false;
+    const d = parseLocalDate(b.last_paid_date);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).reduce((s,b) => s + Number(b.amount), 0);
+  
+  let saldo;
+  if(currentUser.has_salary && !currentUser.is_driver){
+    saldo = currentUser.monthly_income - monthBillsPaid - monthExpenseTotal;
+  } else {
+    saldo = net + (currentUser.has_salary ? currentUser.monthly_income : 0) - dailyExpenseTotal;
+  }
+  
+  const mainBalanceEl = document.getElementById('mainBalanceValue');
+  if(mainBalanceEl) mainBalanceEl.textContent = fmtBRL(saldo);
+  const mainDetailEl = document.getElementById('mainBalanceDetail');
+  if(mainDetailEl) mainDetailEl.textContent = odoRange === 'week' ? 'Nesta semana' : odoRange === 'month' ? 'Neste mês' : 'Total geral';
+  
+  const extrasEl = document.getElementById('balanceExtras');
+  const alertEl = document.getElementById('dailyLimitAlert');
+  if(currentUser.has_salary && currentUser.monthly_income > 0){
+    const used = currentUser.monthly_income - saldo;
+    const usedPct = Math.min(100, Math.max(0, (used / currentUser.monthly_income) * 100));
+    const now = new Date();
+    const dayOfMonth = now.getDate();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysLeft = lastDay - dayOfMonth + 1;
+    const perDay = daysLeft > 0 ? Math.max(0, saldo / daysLeft) : 0;
+    
+    extrasEl.innerHTML =
+      '<div class="balance-bar"><div class="balance-bar-fill" style="width:' + usedPct.toFixed(0) + '%;"></div></div>' +
+      '<div style="font-size:11px;font-weight:700;opacity:0.75;margin-top:6px;">' + usedPct.toFixed(0) + '% do salário usado</div>' +
+      '<div class="balance-mini">' +
+        '<div class="balance-mini-item"><div class="balance-mini-label">Dias restantes</div><div class="balance-mini-value">' + daysLeft + '</div></div>' +
+        '<div class="balance-mini-item"><div class="balance-mini-label">Pode gastar/dia</div><div class="balance-mini-value">' + fmtBRL(perDay) + '</div></div>' +
+        '<div class="balance-mini-item"><div class="balance-mini-label">Sobra prevista</div><div class="balance-mini-value">' + fmtBRL(Math.max(0, saldo)) + '</div></div>' +
+      '</div>';
+    
+    const today = todayISO();
+    const todayExpense = allDailyExpenses.filter(e => e.date === today).reduce((s,e) => s + Number(e.amount), 0);
+    if(perDay > 0 && todayExpense > perDay){
+      alertEl.innerHTML = '<div class="alert-daily">⚠️ Você passou do limite de hoje (R$ ' + perDay.toFixed(2).replace('.', ',') + '). Gastou R$ ' + todayExpense.toFixed(2).replace('.', ',') + '.</div>';
+    } else {
+      alertEl.innerHTML = '';
+    }
+  } else {
+    extrasEl.innerHTML = '';
+    alertEl.innerHTML = '';
+  }
+  
+  const digits = Math.max(0, Math.round(saldo)).toString().padStart(4,'0').split('');
+  const odoDigitsEl = document.getElementById('odoDigits');
+  if(odoDigitsEl) odoDigitsEl.innerHTML = '<span class="odo-currency">R$</span>' + digits.map(d=>'<span class="odo-digit">'+d+'</span>').join('');
+  const odoGrossEl = document.getElementById('odoGross');
+  if(odoGrossEl) odoGrossEl.textContent = fmtBRL(gross + (currentUser.has_salary ? currentUser.monthly_income : 0));
+  const odoExpEl = document.getElementById('odoExp');
+  if(odoExpEl) odoExpEl.textContent = fmtBRL(exp + monthExpenseTotal);
+  const odoLabelEl = document.getElementById('odoLabel');
+  if(odoLabelEl) odoLabelEl.textContent = odoRange === 'week' ? 'Resultado da semana' : odoRange === 'month' ? 'Resultado do mês' : 'Resultado geral';
+  
+  const t = todayISO();
+  const todayNet = entries.filter(e => e.date === t).reduce((s,e) => s + (entryEarn(e) - Number(e.fuel) - Number(e.food)), 0) - dailyExpenseTotal;
+  const statTodayEl = document.getElementById('statToday');
+  if(statTodayEl) statTodayEl.textContent = fmtBRL(todayNet);
+  
+  const fill = document.getElementById('goalBarFill');
+  const goalText = document.getElementById('goalText');
+  if(fill && goalText){
+    if(dailyGoal > 0){
+      const pct = Math.min(100, Math.max(0, (todayNet/dailyGoal)*100));
+      fill.style.width = pct+'%';
+      goalText.textContent = todayNet>=dailyGoal ? ('Meta batida! '+fmtBRL(todayNet)+' de '+fmtBRL(dailyGoal)) : (fmtBRL(todayNet)+' de '+fmtBRL(dailyGoal)+' · '+Math.round(pct)+'%');
+    } else {
+      fill.style.width = '0%';
+      goalText.textContent = 'Defina um objetivo';
+    }
+  }
+  
+  const totalHours = entries.reduce((s,e) => s + Number(e.hours), 0);
+  const totalNet = entries.reduce((s,e) => s + (entryEarn(e) - Number(e.fuel) - Number(e.food)), 0);
+  const statPerHourEl = document.getElementById('statPerHour');
+  if(statPerHourEl) statPerHourEl.textContent = totalHours > 0 ? fmtBRL(totalNet/totalHours) : 'R$ 0,00';
+  
+  renderChart();
+  renderPlatforms();
+  renderKmAnalysis();
+}
+
+function renderChart(){
+  const chart = document.getElementById('chartBars');
+  if(!chart) return;
+  chart.innerHTML='';
+  const days = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+    const iso = new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const dayNet = entries.filter(e=>e.date===iso).reduce((s,e)=>s+(entryEarn(e)-Number(e.fuel)-Number(e.food)),0);
+    days.push({iso, dayNet, label: d.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','').slice(0,3)});
+  }
+  const maxAbs = Math.max(1, ...days.map(d=>Math.abs(d.dayNet)));
+  days.forEach(d=>{
+    const col=document.createElement('div'); col.className='bar-col';
+    const bar=document.createElement('div'); bar.className='bar'+(d.dayNet<0?' neg':'');
+    bar.style.height = Math.max(3, Math.round((Math.abs(d.dayNet)/maxAbs)*90))+'px';
+    const label=document.createElement('div'); label.className='bar-day'; label.textContent=d.label;
+    col.appendChild(bar); col.appendChild(label); chart.appendChild(col);
+  });
+}
+
+function renderPlatforms(){
+  const monthEntries = entries.filter(e=>inRange(e.date,'month'));
+  const platforms = [ {key:'uber',label:'Uber'}, {key:'n99',label:'99'}, {key:'indrive',label:'InDrive'}, {key:'particular',label:'Particular'} ];
+  const platTotals = platforms.map(p=>({...p, total: monthEntries.reduce((s,e)=>s+Number(e[p.key]||0),0)})).sort((a,b)=>b.total-a.total);
+  const platWrap = document.getElementById('platformBars');
+  if(!platWrap) return;
+  const platMax = Math.max(1, ...platTotals.map(p=>p.total));
+  platWrap.innerHTML = platTotals.every(p=>p.total===0) ? '<div class="empty" style="margin-top:12px;">Nenhum registro este mês.</div>' : platTotals.map((p,i)=>'<div class="plat-row"><div class="plat-name">' + p.label + '</div><div class="plat-track"><div class="plat-fill' + (i===0&&p.total>0?' lead':'') + '" style="width:' + Math.round((p.total/platMax)*100) + '%"></div></div><div class="plat-value">' + fmtBRL(p.total) + '</div></div>').join('');
+}
+
+function renderKmAnalysis(){
+  const el = document.getElementById('kmAnalysis');
+  if(!el) return;
+  const monthEntries = entries.filter(e => inRange(e.date, 'month') && Number(e.km) > 0);
+  if(monthEntries.length === 0){
+    el.innerHTML = '<div class="empty" style="padding:14px;">Informe os km rodados para ver a análise.</div>';
+    return;
+  }
+  let totalKm = 0, totalGross = 0, totalExpenses = 0, totalHours = 0;
+  monthEntries.forEach(e => { totalKm += Number(e.km) || 0; totalGross += entryEarn(e); totalExpenses += Number(e.fuel) + Number(e.food); totalHours += Number(e.hours) || 0; });
+  const totalNet = totalGross - totalExpenses;
+  const grossPerKm = totalKm > 0 ? totalGross / totalKm : 0;
+  const costPerKm = totalKm > 0 ? totalExpenses / totalKm : 0;
+  const netPerKm = totalKm > 0 ? totalNet / totalKm : 0;
+  const avgPerHour = totalHours > 0 ? totalNet / totalHours : 0;
+  const profitClass = netPerKm >= 1.5 ? '' : netPerKm >= 1 ? 'warning' : 'danger';
+  const profitLabel = netPerKm >= 1.5 ? 'Excelente' : netPerKm >= 1 ? 'Bom' : 'Baixo';
+  
+  let html = '';
+  html += '<div class="km-card ' + profitClass + '"><div class="km-label">Lucro por KM</div><div class="km-value">R$ ' + netPerKm.toFixed(2).replace('.', ',') + '/km</div><div class="km-detail">' + profitLabel + ' · ' + totalKm.toFixed(0) + ' km rodados</div></div>';
+  html += '<div class="work-row"><span class="work-label">Ganho bruto/km</span><span class="work-value">R$ ' + grossPerKm.toFixed(2).replace('.', ',') + '</span></div>';
+  html += '<div class="work-row"><span class="work-label">Custo/km</span><span class="work-value" style="color:var(--expense);">R$ ' + costPerKm.toFixed(2).replace('.', ',') + '</span></div>';
+  html += '<div class="work-row"><span class="work-label">Lucro líquido/km</span><span class="work-value pos">R$ ' + netPerKm.toFixed(2).replace('.', ',') + '</span></div>';
+  if(avgPerHour > 0){ html += '<div class="work-divider"></div><div class="work-row"><span class="work-label">Média R$/hora</span><span class="work-value">' + fmtBRL(avgPerHour) + '</span></div>'; }
+  el.innerHTML = html;
+}
+
+// ============ REGISTROS DE HOJE ============
+function renderTodayRecords(){
+  const listEl = document.getElementById('todayRecordsList');
+  if(!listEl) return;
+  const today = todayISO();
+  const todayEntries = entries.filter(e => e.date === today);
+  if(todayEntries.length === 0){
+    listEl.innerHTML = '<div class="empty" style="padding:14px;">Nenhum registro hoje ainda.</div>';
+    return;
+  }
+  let totalGross = 0, totalFuel = 0, totalFood = 0, totalHours = 0, totalKm = 0;
+  todayEntries.forEach(e => {
+    totalGross += entryEarn(e);
+    totalFuel += Number(e.fuel) || 0;
+    totalFood += Number(e.food) || 0;
+    totalHours += Number(e.hours) || 0;
+    totalKm += Number(e.km) || 0;
+  });
+  const totalExp = totalFuel + totalFood;
+  const totalNet = totalGross - totalExp;
+  const netPerKm = totalKm > 0 ? totalNet / totalKm : 0;
+  const netPerHour = totalHours > 0 ? totalNet / totalHours : 0;
+
+  let html = '';
+  todayEntries.forEach(e => {
+    const earn = entryEarn(e);
+    const exp = (Number(e.fuel)||0) + (Number(e.food)||0);
+    const net = earn - exp;
+    const lines = [];
+    if(e.uber) lines.push('Uber: <strong>' + fmtBRL(e.uber) + '</strong>');
+    if(e.n99) lines.push('99: <strong>' + fmtBRL(e.n99) + '</strong>');
+    if(e.indrive) lines.push('InDrive: <strong>' + fmtBRL(e.indrive) + '</strong>');
+    if(e.particular) lines.push('Particular: <strong>' + fmtBRL(e.particular) + '</strong>');
+    if(e.fuel) lines.push('Combustível: <strong style="color:var(--expense);">' + fmtBRL(e.fuel) + '</strong>');
+    if(e.food) lines.push('Alimentação: <strong style="color:var(--expense);">' + fmtBRL(e.food) + '</strong>');
+    if(e.hours) lines.push('Horas: <strong>' + e.hours + 'h</strong>');
+    if(e.km) lines.push('Km: <strong>' + e.km + 'km</strong>');
+    html += '<div class="day-record"><div class="day-record-header"><span class="day-record-title">Registro #' + (e.id ? e.id.slice(0,6) : '—') + '</span><span class="day-record-total" style="color:' + (net>=0?'var(--money-neon)':'var(--expense)') + ';">' + fmtBRL(net) + '</span></div><div class="day-record-grid">' + lines.map(l => '<span>' + l + '</span>').join('') + '</div><div class="bill-card-actions"><button class="btn-delete delete-today-btn" data-id="' + e.id + '" style="flex:1;padding:10px;font-size:12px;">Excluir</button></div></div>';
+  });
+  html += '<div class="day-summary">';
+  html += '<div class="day-summary-row"><span class="lbl">Total bruto</span><span class="val" style="color:var(--money-neon);">' + fmtBRL(totalGross) + '</span></div>';
+  html += '<div class="day-summary-row"><span class="lbl">Total gastos</span><span class="val" style="color:var(--expense);">' + fmtBRL(totalExp) + '</span></div>';
+  html += '<div class="day-summary-row"><span class="lbl">Líquido do dia</span><span class="val" style="color:' + (totalNet>=0?'var(--money-neon)':'var(--expense)') + ';">' + fmtBRL(totalNet) + '</span></div>';
+  html += '<div class="work-divider" style="margin:10px 0;"></div>';
+  html += '<div class="day-summary-row"><span class="lbl">Km total</span><span class="val">' + totalKm.toFixed(1) + ' km</span></div>';
+  html += '<div class="day-summary-row"><span class="lbl">Horas totais</span><span class="val">' + totalHours.toFixed(1) + 'h</span></div>';
+  html += '<div class="day-summary-row"><span class="lbl">Média R$/km</span><span class="val" style="color:var(--money-neon);">R$ ' + netPerKm.toFixed(2).replace('.', ',') + '</span></div>';
+  html += '<div class="day-summary-row"><span class="lbl">Média R$/h</span><span class="val" style="color:var(--money-neon);">R$ ' + netPerHour.toFixed(2).replace('.', ',') + '</span></div>';
+  html += '</div>';
+  listEl.innerHTML = html;
+  listEl.querySelectorAll('.delete-today-btn').forEach(btn => {
+    btn.addEventListener('click', async () => { await deleteEntry(btn.dataset.id); renderTodayRecords(); });
+  });
+}
+
+// ============ PROJEÇÃO ============
+function renderWorkPanel(){
+  const panel = document.getElementById('workPanelContent');
+  if(!panel) return;
+  getDailyExpenseTotal().then(dailyExpenseTotal => {
+    if(currentUser.has_salary && !currentUser.is_driver){
+      const monthBillsTotal = bills.filter(b => !getBillStatus(b).isPaidThisCycle).reduce((s,b) => s + Number(b.amount), 0);
+      const saldo = currentUser.monthly_income - monthBillsTotal - dailyExpenseTotal;
+      let html = '';
+      html += '<div class="work-row"><span class="work-label">Contas do mês</span><span class="work-value">' + fmtBRL(monthBillsTotal) + '</span></div>';
+      html += '<div class="work-row"><span class="work-label">Gastos de hoje</span><span class="work-value" style="color:var(--expense);">' + fmtBRL(dailyExpenseTotal) + '</span></div>';
+      html += '<div class="work-row"><span class="work-label">Saldo disponível</span><span class="work-value ' + (saldo >= 0 ? 'pos' : '') + '">' + fmtBRL(saldo) + '</span></div>';
+      html += '<div class="work-divider"></div>';
+      if(saldo >= 0){ html += '<div class="highlight-box"><div class="big">' + fmtBRL(saldo) + '</div><div class="label">saldo disponível</div></div>'; }
+      else { html += '<div class="highlight-box neg"><div class="big">' + fmtBRL(Math.abs(saldo)) + '</div><div class="label">acima do orçamento</div></div>'; }
+      panel.innerHTML = html;
+      return;
+    }
+    
+    const todayStr = todayISO();
+    const todayNet = entries.filter(e => e.date === todayStr).reduce((s,e) => s + (entryEarn(e) - Number(e.fuel) - Number(e.food)), 0) - dailyExpenseTotal;
+    const pendingBills = bills.filter(b => !getBillStatus(b).isPaidThisCycle).map(b => ({ ...b, daysLeft: getBillDaysLeft(b) })).sort((a,b) => a.daysLeft - b.daysLeft);
+    const urgentToday = pendingBills.filter(b => b.daysLeft === 0);
+    const urgentSoon = pendingBills.filter(b => b.daysLeft > 0 && b.daysLeft <= 7);
+    let needToday = 0;
+    let needTodayBreakdown = [];
+    urgentToday.forEach(b => { needToday += Number(b.amount); needTodayBreakdown.push({ name: b.name, amount: Number(b.amount), daysLeft: 0, perDay: Number(b.amount), label: 'HOJE' }); });
+    urgentSoon.forEach(b => { const perDay = Number(b.amount) / Math.max(1, b.daysLeft); needToday += perDay; needTodayBreakdown.push({ name: b.name, amount: Number(b.amount), daysLeft: b.daysLeft, perDay, label: b.daysLeft === 1 ? 'AMANHÃ' : 'EM ' + b.daysLeft + ' DIAS' }); });
+    if(currentUser.has_salary && currentUser.monthly_income > 0){ needToday += currentUser.monthly_income / 30; }
+    
+    const totalHours = entries.reduce((s,e) => s + Number(e.hours), 0);
+    const totalNet = entries.reduce((s,e) => s + (entryEarn(e) - Number(e.fuel) - Number(e.food)), 0);
+    const avgPerHour = totalHours > 0 ? totalNet / totalHours : 20;
+    const stillNeed = Math.max(0, needToday - todayNet);
+    const hoursNeeded = stillNeed > 0 ? stillNeed / avgPerHour : 0;
+    
+    let html = '';
+    html += '<div class="work-row"><span class="work-label">Resultado líquido hoje</span><span class="work-value ' + (todayNet >= needToday ? 'pos' : '') + '">' + fmtBRL(todayNet) + '</span></div>';
+    html += '<div class="work-row"><span class="work-label">Receita necessária hoje</span><span class="work-value">' + fmtBRL(needToday) + '</span></div>';
+    html += '<div class="work-divider"></div>';
+    if(needTodayBreakdown.length === 0){ html += '<div class="work-row" style="font-size:12px;"><span class="work-label">Nenhuma conta pendente nos próximos 7 dias 🎉</span></div>'; }
+    else {
+      needTodayBreakdown.forEach(b => {
+        html += '<div style="background:var(--surface-2);border-radius:8px;padding:10px 12px;margin-bottom:6px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-weight:700;font-size:13px;">' + b.name + '</span><span style="font-family:\'Sora\',sans-serif;font-size:13px;font-weight:800;color:var(--money-neon);">' + fmtBRL(b.amount) + '</span></div><div style="font-size:11px;color:var(--text-muted);font-weight:600;">' + b.label + ' · Por dia: ' + fmtBRL(b.perDay) + '</div></div>';
+      });
+    }
+    html += '<div class="work-divider"></div>';
+    if(stillNeed > 0){
+      html += '<div class="highlight-box neg"><div class="big">' + fmtBRL(stillNeed) + '</div><div class="label">faltam hoje</div></div>';
+      if(hoursNeeded > 0.5){ html += '<div class="work-row" style="margin-top:8px;font-size:12px;"><span class="work-label">Estimativa</span><span class="work-value">~' + hoursNeeded.toFixed(1) + 'h</span></div>'; }
+    } else { html += '<div class="highlight-box"><div class="big">META ATINGIDA</div><div class="label">receita suficiente</div></div>'; }
+    panel.innerHTML = html;
+  });
+}
+
+// ============ CONTAS ============
+function getBillDaysLeft(bill){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const freq = bill.frequency;
+  if(bill.last_paid_date){
+    const lastPaid = new Date(bill.last_paid_date); lastPaid.setHours(0,0,0,0);
+    if(freq === 'daily' && lastPaid.getTime() === today.getTime()){ return 999; }
+    if(freq === 'weekly'){ const diffDays = Math.floor((today - lastPaid) / (1000*60*60*24)); if(diffDays < 7) return 999; }
+    if(freq === 'monthly'){ if(lastPaid.getMonth() === today.getMonth() && lastPaid.getFullYear() === today.getFullYear()){ return 999; } }
+  }
+  if(bill.due_date){
+    const dueDate = parseLocalDate(bill.due_date); dueDate.setHours(0,0,0,0);
+    let finalDueDate = new Date(dueDate);
+    while(finalDueDate < today){ finalDueDate.setMonth(finalDueDate.getMonth() + 1); }
+    return Math.floor((finalDueDate.getTime() - today.getTime()) / (1000*60*60*24));
+  }
+  if(freq === 'daily'){ return 0; }
+  if(freq === 'weekly'){ const tw = today.getDay(); const dw = bill.due_weekday || 1; return (dw - tw + 7) % 7; }
+  if(freq === 'monthly'){ const td = today.getDate(); const dd = bill.due_day || 1; if(dd >= td) return dd - td; const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(); return (lastDay - td) + dd; }
+  return 0;
+}
+
+function getBillDueDate(bill){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const freq = bill.frequency;
+  if(bill.due_date){
+    const specificDate = parseLocalDate(bill.due_date); specificDate.setHours(0,0,0,0);
+    if(bill.last_paid_date){
+      const lastPaid = new Date(bill.last_paid_date); lastPaid.setHours(0,0,0,0);
+      if(lastPaid.getTime() < today.getTime()){ const nextDue = new Date(specificDate); nextDue.setMonth(nextDue.getMonth() + 1); return nextDue; }
+    }
+    let finalDate = new Date(specificDate);
+    while(finalDate < today){ finalDate.setMonth(finalDate.getMonth() + 1); }
+    return finalDate;
+  }
+  if(bill.last_paid_date){
+    const lastPaid = new Date(bill.last_paid_date); lastPaid.setHours(0,0,0,0);
+    if(freq === 'daily' && lastPaid.getTime() === today.getTime()){ const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1); return tomorrow; }
+    if(freq === 'weekly'){ const diffDays = Math.floor((today - lastPaid) / (1000*60*60*24)); if(diffDays < 7){ const nextDue = new Date(lastPaid); nextDue.setDate(lastPaid.getDate() + 7); return nextDue; } }
+    if(freq === 'monthly'){ if(lastPaid.getMonth() === today.getMonth() && lastPaid.getFullYear() === today.getFullYear()){ const nextDue = new Date(today.getFullYear(), today.getMonth() + 1, bill.due_day || 1); return nextDue; } }
+  }
+  if(freq === 'daily'){ return new Date(today); }
+  if(freq === 'weekly'){ const dueWeekday = bill.due_weekday || 1; let daysToAdd = (dueWeekday - today.getDay() + 7) % 7; const dueDate = new Date(today); dueDate.setDate(today.getDate() + daysToAdd); return dueDate; }
+  if(freq === 'monthly'){ const dueDay = bill.due_day || 1; const todayDate = today.getDate(); let dueDate = new Date(today.getFullYear(), today.getMonth(), dueDay); if(todayDate > dueDay){ dueDate = new Date(today.getFullYear(), today.getMonth() + 1, dueDay); } return dueDate; }
+  return null;
+}
+
+function formatDueDate(date){
+  if(!date) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  return day + '/' + month + '/' + year;
+}
+
+function getBillStatus(bill){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const freq = bill.frequency;
+  if(bill.last_paid_date){
+    const lastPaid = new Date(bill.last_paid_date); lastPaid.setHours(0,0,0,0);
+    if(freq === 'daily' && lastPaid.getTime() === today.getTime()){ const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1); return { label: 'Pago hoje · Volta amanhã', class: 'paid', daysLeft: 999, dueDate: tomorrow, isOverdue: false, isPaidThisCycle: true }; }
+    if(freq === 'weekly'){ const diffDays = Math.floor((today - lastPaid) / (1000*60*60*24)); if(diffDays < 7){ const nextDue = new Date(lastPaid); nextDue.setDate(lastPaid.getDate() + 7); return { label: 'Pago · Próximo: ' + formatDueDate(nextDue), class: 'paid', daysLeft: 999, dueDate: nextDue, isOverdue: false, isPaidThisCycle: true }; } }
+    if(freq === 'monthly'){ if(lastPaid.getMonth() === today.getMonth() && lastPaid.getFullYear() === today.getFullYear()){ const nextDue = new Date(lastPaid); nextDue.setMonth(nextDue.getMonth() + 1); return { label: 'Pago · Próximo: ' + formatDueDate(nextDue), class: 'paid', daysLeft: 999, dueDate: nextDue, isOverdue: false, isPaidThisCycle: true }; } }
+  }
+  const daysLeft = getBillDaysLeft(bill);
+  const dueDate = getBillDueDate(bill);
+  const isOverdue = dueDate && dueDate < today;
+  if(isOverdue){ return { label: 'VENCIDA', class: 'overdue', daysLeft, dueDate, isOverdue: true, isPaidThisCycle: false }; }
+  return { label: daysLeft === 0 ? 'Vence hoje' : daysLeft === 1 ? 'Vence amanhã' : 'Vence em ' + daysLeft + ' dias', class: daysLeft <= 1 ? 'urgent' : daysLeft <= 3 ? 'warning' : '', daysLeft, dueDate, isOverdue: false, isPaidThisCycle: false };
+}
+
+async function loadBills(){
+  const { data } = await supa.from('bills').select('*').eq('user_id', currentUser.id).order('created_at', { ascending:false });
+  bills = data || [];
+  renderBills();
+  renderWorkPanel();
+  updateContasSub();
+}
+
+function updateContasSub(){
+  const subEl = document.getElementById('contasSub');
+  if(!subEl) return;
+  const pending = bills.filter(b => !getBillStatus(b).isPaidThisCycle);
+  const overdue = pending.filter(b => getBillStatus(b).isOverdue);
+  if(pending.length === 0){ subEl.textContent = 'Todas as contas em dia 🎉'; return; }
+  if(overdue.length > 0){ subEl.textContent = '🔴 ' + overdue.length + ' vencida(s) · ' + pending.length + ' pendente(s)'; }
+  else { subEl.textContent = pending.length + ' conta(s) pendente(s)'; }
+}
+
+function renderBills(){
+  const alertList = document.getElementById('billsAlertList');
+  if(alertList){
+    const pendingBills = bills.filter(b => !getBillStatus(b).isPaidThisCycle).map(b => ({ ...b, status: getBillStatus(b) })).sort((a,b) => {
+      if(a.status.isOverdue && !b.status.isOverdue) return -1;
+      if(!a.status.isOverdue && b.status.isOverdue) return 1;
+      return Number(b.amount) - Number(a.amount);
+    }).slice(0, 5);
+    if(pendingBills.length === 0){ alertList.innerHTML = '<div class="empty" style="padding:14px;">Nenhuma conta pendente 🎉</div>'; }
+    else {
+      alertList.innerHTML = pendingBills.map(b => {
+        const status = b.status;
+        const freqLabel = b.frequency === 'daily' ? 'Diária' : b.frequency === 'weekly' ? 'Semanal' : 'Mensal';
+        const dueDateFormatted = status.dueDate ? formatDueDate(status.dueDate) : '';
+        const statusColor = status.isOverdue ? 'var(--overdue)' : (status.daysLeft <= 1 ? 'var(--warning)' : 'var(--text-muted)');
+        return '<div class="bill-card' + (status.isOverdue ? ' overdue' : '') + '"><div class="bill-card-header"><span class="bill-card-name">' + b.name + '</span><span class="bill-card-amount">' + fmtBRL(b.amount) + '</span></div><div class="bill-card-details"><span>' + freqLabel + ' · Vence: <strong style="color:' + statusColor + ';">' + dueDateFormatted + '</strong></span><span style="color:' + statusColor + ';font-weight:700;">' + status.label + '</span></div><div class="bill-card-actions"><button class="btn-pay quick-pay-btn" data-id="' + b.id + '">Pagar</button></div></div>';
+      }).join('');
+      alertList.querySelectorAll('.quick-pay-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const bill = bills.find(b => b.id === btn.dataset.id);
+          if(!bill) return;
+          const confirmed = await showConfirm('Pagar conta', 'Pagar "' + bill.name + '" por ' + fmtBRL(bill.amount) + '?', 'Pagar');
+          if(!confirmed) return;
+          await payBill(bill);
+        });
+      });
+    }
+  }
+
+  const fixedSection = document.getElementById('fixedBillsSection');
+  const fixedList = document.getElementById('fixedBillsList');
+  if(fixedSection && fixedList){
+    const fixedBills = bills.filter(b => b.frequency === 'monthly');
+    if(fixedBills.length === 0){ fixedSection.classList.add('hidden'); }
+    else {
+      fixedSection.classList.remove('hidden');
+      const totalFixed = fixedBills.reduce((s,b) => s + Number(b.amount), 0);
+      fixedList.innerHTML = '<div class="bill-card" style="background:var(--surface-2);"><div class="bill-card-header"><span class="bill-card-name">Total mensal fixo</span><span class="bill-card-amount">' + fmtBRL(totalFixed) + '</span></div><div class="bill-card-details"><span>' + fixedBills.length + ' conta(s) mensal(is)</span></div></div>' + fixedBills.map(b => { const s = getBillStatus(b); return '<div class="bill-card' + (s.isOverdue ? ' overdue' : '') + '"><div class="bill-card-header"><span class="bill-card-name" style="font-size:14px;">' + b.name + '</span><span class="bill-card-amount" style="font-size:15px;">' + fmtBRL(b.amount) + '</span></div><div class="bill-card-details" style="margin-bottom:0;"><span style="color:' + (s.isOverdue ? 'var(--overdue)' : 'var(--text-muted)') + ';font-weight:700;">' + s.label + '</span></div></div>'; }).join('');
+    }
+  }
+  
+  const listEl = document.getElementById('billsList');
+  if(!listEl) return;
+  if(bills.length === 0){ listEl.innerHTML = '<div class="empty">Nenhuma conta cadastrada.</div>'; return; }
+  const pendingBills = bills.filter(b => !getBillStatus(b).isPaidThisCycle).map(b => ({ ...b, status: getBillStatus(b) })).sort((a,b) => {
+    if(a.status.isOverdue && !b.status.isOverdue) return -1;
+    if(!a.status.isOverdue && b.status.isOverdue) return 1;
+    return Number(b.amount) - Number(a.amount);
+  });
+  const paidThisCycleBills = bills.filter(b => getBillStatus(b).isPaidThisCycle).map(b => ({ ...b, status: getBillStatus(b) }));
+  let html = '';
+  if(pendingBills.length > 0){
+    html += '<div style="font-family:\'Sora\',sans-serif;font-size:16px;font-weight:800;margin:20px 0 10px;">Pendentes (' + pendingBills.length + ')</div>';
+    html += pendingBills.map(b => renderBillCard(b)).join('');
+  }
+  if(paidThisCycleBills.length > 0){
+    html += '<div style="font-family:\'Sora\',sans-serif;font-size:16px;font-weight:800;margin:20px 0 10px;color:var(--money-neon);">Pagas neste ciclo (' + paidThisCycleBills.length + ')</div>';
+    html += paidThisCycleBills.map(b => {
+      const freqLabel = b.frequency === 'daily' ? 'Diária' : b.frequency === 'weekly' ? 'Semanal' : 'Mensal';
+      const installmentLabel = b.total_installments > 1 ? ' · Parcela ' + (b.installments_paid || 0) + '/' + b.total_installments : '';
+      return '<div class="bill-card paid-cycle"><div class="bill-card-header"><span class="bill-card-name">' + b.name + '</span><span class="bill-card-amount" style="color:var(--money-neon);">' + fmtBRL(b.amount) + '</span></div><div class="bill-card-details"><span>' + freqLabel + installmentLabel + '</span><span style="color:var(--money-neon);font-weight:700;">' + b.status.label + '</span></div><div class="bill-card-actions"><button class="btn-undo undo-pay-btn" data-id="' + b.id + '">↩ Desfazer</button><button class="btn-delete delete-btn" data-id="' + b.id + '">Excluir</button></div></div>';
+    }).join('');
+  }
+  listEl.innerHTML = html;
+  
+  listEl.querySelectorAll('.paid-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const bill = bills.find(b => b.id === btn.dataset.id);
+      if(!bill) return;
+      const confirmed = await showConfirm('Pagar conta', 'Pagar "' + bill.name + '" por ' + fmtBRL(bill.amount) + '?', 'Pagar');
+      if(!confirmed) return;
+      await payBill(bill);
+    });
+  });
+  listEl.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const bill = bills.find(b => b.id === btn.dataset.id);
+      if(!bill) return;
+      await openEditBillModal(bill);
+    });
+  });
+  listEl.querySelectorAll('.undo-pay-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const bill = bills.find(b => b.id === btn.dataset.id);
+      if(!bill) return;
+      const confirmed = await showConfirm('Desfazer pagamento', 'Deseja desfazer o pagamento de "' + bill.name + '"?', 'Desfazer');
+      if(!confirmed) return;
+      const newInstallmentsPaid = Math.max(0, (bill.installments_paid || 1) - 1);
+      await supa.from('bills').update({ last_paid_date: null, paid_date: null, installments_paid: newInstallmentsPaid, paid_cycles: Math.max(0, (bill.paid_cycles || 1) - 1) }).eq('id', bill.id);
+      await supa.from('payment_history').delete().eq('bill_id', bill.id).eq('paid_date', bill.last_paid_date);
+      await showAlert('Desfeito!', 'O pagamento foi desfeito.', '↩️');
+      await loadBills();
+    });
+  });
+  listEl.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const confirmed = await showConfirm('Excluir conta', 'Tem certeza?', 'Excluir', true);
+      if(!confirmed) return;
+      await supa.from('bills').delete().eq('id', btn.dataset.id);
+      await loadBills();
+    });
+  });
+}
+
+function renderBillCard(b){
+  const status = b.status;
+  const freqLabel = b.frequency === 'daily' ? 'Diária' : b.frequency === 'weekly' ? 'Semanal' : 'Mensal';
+  const installmentLabel = b.total_installments > 1 ? ' · Parcela ' + ((b.installments_paid || 0) + 1) + '/' + b.total_installments : '';
+  const dueDateFormatted = status.dueDate ? formatDueDate(status.dueDate) : '';
+  const statusColor = status.isOverdue ? 'var(--overdue)' : (status.daysLeft <= 1 ? 'var(--warning)' : 'var(--text-muted)');
+  return '<div class="bill-card' + (status.isOverdue ? ' overdue' : '') + '"><div class="bill-card-header"><span class="bill-card-name">' + b.name + (status.isOverdue ? ' 🔴' : '') + '</span><span class="bill-card-amount">' + fmtBRL(b.amount) + '</span></div><div class="bill-card-details"><span>' + freqLabel + installmentLabel + '</span><span>Vencimento: <strong style="color:' + statusColor + ';">' + dueDateFormatted + '</strong></span><span style="color:' + statusColor + ';font-weight:700;">' + status.label + '</span></div><div class="bill-card-actions"><button class="btn-pay paid-btn" data-id="' + b.id + '">Pagar</button><button class="btn-edit edit-btn" data-id="' + b.id + '">Editar</button><button class="btn-delete delete-btn" data-id="' + b.id + '">Excluir</button></div></div>';
+}
+
+async function openEditBillModal(bill){
+  const modalHtml = `
+    <div id="editBillModal" class="modal-overlay">
+      <div class="modal-box" style="max-width:450px;">
+        <div class="modal-title" style="margin-bottom:16px;">✏️ Editar conta</div>
+        <div class="field"><label>Descrição</label><input type="text" id="editBillName" value="${bill.name || ''}" placeholder="Ex: Aluguel"></div>
+        <div class="field"><label>Valor (R$)</label><input type="text" id="editBillAmount" value="${fmtBRL(bill.amount)}" inputmode="decimal"></div>
+        <div class="field"><label>Frequência</label><select id="editBillFrequency"><option value="daily" ${bill.frequency === 'daily' ? 'selected' : ''}>Diária</option><option value="weekly" ${bill.frequency === 'weekly' ? 'selected' : ''}>Semanal</option><option value="monthly" ${bill.frequency === 'monthly' ? 'selected' : ''}>Mensal</option></select></div>
+        <div class="field" id="editBillDueDayField" ${bill.frequency !== 'monthly' ? 'style="display:none"' : ''}><label>Dia do vencimento</label><input type="number" id="editBillDueDay" value="${bill.due_day || ''}" min="1" max="31"></div>
+        <div class="field" id="editBillDueWeekdayField" ${bill.frequency !== 'weekly' ? 'style="display:none"' : ''}><label>Dia da semana</label><select id="editBillDueWeekday"><option value="1" ${bill.due_weekday === 1 ? 'selected' : ''}>Segunda</option><option value="2" ${bill.due_weekday === 2 ? 'selected' : ''}>Terça</option><option value="3" ${bill.due_weekday === 3 ? 'selected' : ''}>Quarta</option><option value="4" ${bill.due_weekday === 4 ? 'selected' : ''}>Quinta</option><option value="5" ${bill.due_weekday === 5 ? 'selected' : ''}>Sexta</option><option value="6" ${bill.due_weekday === 6 ? 'selected' : ''}>Sábado</option><option value="0" ${bill.due_weekday === 0 ? 'selected' : ''}>Domingo</option></select></div>
+        <div class="field"><label>Parcelas (total)</label><input type="number" id="editBillInstallments" value="${bill.total_installments || 1}" min="1" max="120"></div>
+        <div class="modal-actions" style="margin-top:20px;"><button class="modal-btn cancel" onclick="closeEditBillModal()">Cancelar</button><button class="modal-btn confirm" onclick="saveEditBill('${bill.id}')">Salvar</button></div>
+      </div>
+    </div>`;
+  const oldModal = document.getElementById('editBillModal');
+  if(oldModal) oldModal.remove();
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const amountInput = document.getElementById('editBillAmount');
+  amountInput.addEventListener('input', (e) => { e.target.value = maskMoney(e.target.value); });
+  document.getElementById('editBillFrequency').addEventListener('change', (ev) => {
+    const freq = ev.target.value;
+    document.getElementById('editBillDueDayField').style.display = freq === 'monthly' ? 'block' : 'none';
+    document.getElementById('editBillDueWeekdayField').style.display = freq === 'weekly' ? 'block' : 'none';
+  });
+}
+
+function closeEditBillModal(){ const modal = document.getElementById('editBillModal'); if(modal) modal.remove(); }
+
+async function saveEditBill(billId){
+  const name = document.getElementById('editBillName').value.trim();
+  const amount = unmaskMoney(document.getElementById('editBillAmount').value);
+  const frequency = document.getElementById('editBillFrequency').value;
+  const dueDay = parseInt(document.getElementById('editBillDueDay').value) || null;
+  const dueWeekday = parseInt(document.getElementById('editBillDueWeekday').value) || null;
+  const totalInstallments = parseInt(document.getElementById('editBillInstallments').value) || 1;
+  if(!name){ await showAlert('Atenção', 'Informe a descrição.', '⚠️'); return; }
+  if(amount <= 0){ await showAlert('Atenção', 'Informe o valor.', '⚠️'); return; }
+  const { error } = await supa.from('bills').update({ name, amount, frequency, due_day: frequency === 'monthly' ? dueDay : null, due_weekday: frequency === 'weekly' ? dueWeekday : null, total_installments: totalInstallments }).eq('id', billId);
+  if(error){ await showAlert('Erro', error.message, '❌'); return; }
+  closeEditBillModal();
+  await loadBills();
+  await showAlert('Sucesso', 'Conta atualizada!', '✅');
+}
+
+async function payBill(bill){
+  const today = todayISO();
+  const newInstallmentsPaid = (bill.installments_paid || 0) + 1;
+  const isLastInstallment = bill.total_installments > 1 && newInstallmentsPaid >= bill.total_installments;
+  await supa.from('bills').update({ last_paid_date: today, paid_date: today, installments_paid: newInstallmentsPaid, paid_cycles: (bill.paid_cycles || 0) + 1 }).eq('id', bill.id);
+  await supa.from('payment_history').insert({ user_id: currentUser.id, bill_id: bill.id, bill_name: bill.name, amount: bill.amount, frequency: bill.frequency, installment_number: newInstallmentsPaid, total_installments: bill.total_installments || 1, paid_date: today });
+  if(isLastInstallment){
+    await showAlert('Concluído!', 'Todas as parcelas foram pagas. Conta quitada! 🎉', '🎉');
+    await supa.from('bills').delete().eq('id', bill.id);
+  } else { await showAlert('Sucesso', 'Conta paga! Ela voltará no próximo ciclo.', '✅'); }
+  await loadBills();
+  await loadDailyExpenses();
+  await render();
+}
+
+document.getElementById('btnAddBill').addEventListener('click', async ()=>{
+  const name = document.getElementById('billName').value.trim();
+  const amount = unmaskMoney(document.getElementById('billAmount').value);
+  const frequency = document.getElementById('billFrequency').value;
+  const dueDay = parseInt(document.getElementById('billDueDay').value) || 1;
+  const dueWeekday = parseInt(document.getElementById('billDueWeekday').value) || 1;
+  const totalInstallments = parseInt(document.getElementById('billInstallments').value) || 1;
+  const useSpecificMonth = document.getElementById('billUseSpecificMonth').checked;
+  const billMonth = parseInt(document.getElementById('billMonth').value) || (new Date().getMonth() + 1);
+  const billYear = parseInt(document.getElementById('billYear').value) || new Date().getFullYear();
+  if(!name){ await showAlert('Atenção', 'Informe a descrição.', '⚠️'); return; }
+  if(amount <= 0){ await showAlert('Atenção', 'Informe o valor.', '⚠️'); return; }
+  let dueDate = null;
+  if(frequency === 'monthly' && useSpecificMonth){ dueDate = billYear + '-' + String(billMonth).padStart(2, '0') + '-' + String(dueDay).padStart(2, '0'); }
+  showSpinner('btnAddBill', 'billSpinner');
+  const { error } = await supa.from('bills').insert({ user_id: currentUser.id, name, amount, frequency, due_day: frequency === 'monthly' ? dueDay : null, due_weekday: frequency === 'weekly' ? dueWeekday : null, due_date: dueDate, is_paid: false, total_installments: totalInstallments, installment_number: 1, installments_paid: 0, is_installment: totalInstallments > 1 });
+  hideSpinner('btnAddBill', 'billSpinner');
+  if(error){ await showAlert('Erro', error.message, '❌'); return; }
+  document.getElementById('billName').value = '';
+  document.getElementById('billAmount').value = '';
+  document.getElementById('billDueDay').value = '';
+  document.getElementById('billInstallments').value = '1';
+  document.getElementById('billUseSpecificMonth').checked = false;
+  document.getElementById('billMonthYearField').classList.add('hidden');
+  await loadBills();
+  await showAlert('Sucesso', 'Conta adicionada!', '✅');
+});
+
+document.getElementById('billFrequency').addEventListener('change', (ev)=>{ 
+  const freq = ev.target.value; 
+  document.getElementById('billDueDayField').classList.toggle('hidden', freq !== 'monthly'); 
+  document.getElementById('billDueWeekdayField').classList.toggle('hidden', freq !== 'weekly'); 
+  if(freq !== 'monthly'){ document.getElementById('billUseSpecificMonth').checked = false; document.getElementById('billMonthYearField').classList.add('hidden'); }
+});
+document.getElementById('billUseSpecificMonth').addEventListener('change', (ev)=>{ document.getElementById('billMonthYearField').classList.toggle('hidden', !ev.target.checked); });
+document.getElementById('btnBills').addEventListener('click', (e)=>{ e.stopPropagation(); document.getElementById('appScreen').classList.add('hidden'); document.getElementById('billsScreen').classList.remove('hidden'); loadBills(); });
+document.getElementById('btnBackFromBills').addEventListener('click', ()=>{ document.getElementById('billsScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); });
+
+// ============ ABAS RESULTADO ============
+document.querySelectorAll('#resultTabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#resultTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['resumo','calendario','conquistas'].forEach(t => document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('hidden'));
+    document.getElementById('tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)).classList.remove('hidden');
+  });
+});
+
+function renderResultTabs(){
+  renderPieChart();
+  renderCompareMonth();
+  renderRule5020();
+  renderCalendar();
+  renderAchievements();
+}
+
+// ============ PIZZA ============
+function renderPieChart(){
+  const el = document.getElementById('pieChart');
+  if(!el) return;
+  const monthExpenses = allDailyExpenses.filter(e => inRange(e.date, 'month'));
+  if(monthExpenses.length === 0){
+    el.innerHTML = '<div class="empty" style="padding:14px;">Sem gastos extras este mês.</div>';
+    return;
+  }
+  const totals = {};
+  monthExpenses.forEach(e => {
+    const cat = e.category || 'Outros';
+    totals[cat] = (totals[cat] || 0) + Number(e.amount);
+  });
+  const sorted = Object.entries(totals).sort((a,b) => b[1] - a[1]);
+  const total = sorted.reduce((s,[,v]) => s + v, 0);
+  const colors = ['#00E676','#00C853','#2979FF','#8B5CF6','#FFB800','#FF6B00','#FF3B30','#64B5F6'];
+  
+  let svg = '<svg class="pie-svg" width="120" height="120" viewBox="0 0 42 42">';
+  let accum = 0;
+  sorted.forEach(([cat, val], i) => {
+    const pct = (val / total) * 100;
+    const dash = (pct * 100) / 100 * (2 * Math.PI * 15.9155) / 100;
+    const offset = accum;
+    svg += '<circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="' + colors[i % colors.length] + '" stroke-width="6" stroke-dasharray="' + dash + ' ' + (100 - dash) + '" stroke-dashoffset="' + (-offset) + '"></circle>';
+    accum += dash;
+  });
+  svg += '</svg>';
+  
+  let legend = '<div class="pie-legend">';
+  sorted.forEach(([cat, val], i) => {
+    legend += '<div class="pie-legend-row"><span class="pie-legend-dot" style="background:' + colors[i % colors.length] + ';"></span><span class="pie-legend-name">' + cat + '</span><span class="pie-legend-val">' + fmtBRL(val) + '</span></div>';
+  });
+  legend += '</div>';
+  
+  el.innerHTML = svg + legend;
+}
+
+// ============ COMPARAR MÊS PASSADO ============
+function renderCompareMonth(){
+  const el = document.getElementById('compareMonth');
+  if(!el) return;
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+  const lastMonthDate = new Date(thisYear, thisMonth - 1, 1);
+  const lastMonth = lastMonthDate.getMonth();
+  const lastYear = lastMonthDate.getFullYear();
+  
+  const thisTotal = entries.filter(e => { const d = parseLocalDate(e.date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; }).reduce((s,e) => s + entryEarn(e) - Number(e.fuel) - Number(e.food), 0) + allDailyExpenses.filter(e => { const d = parseLocalDate(e.date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; }).reduce((s,e) => s + Number(e.amount), 0);
+  const lastTotal = entries.filter(e => { const d = parseLocalDate(e.date); return d.getMonth() === lastMonth && d.getFullYear() === lastYear; }).reduce((s,e) => s + entryEarn(e) - Number(e.fuel) - Number(e.food), 0) + allDailyExpenses.filter(e => { const d = parseLocalDate(e.date); return d.getMonth() === lastMonth && d.getFullYear() === lastYear; }).reduce((s,e) => s + Number(e.amount), 0);
+  
+  if(lastTotal === 0){ el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);font-weight:600;">Sem dados do mês passado ainda.</div>'; return; }
+  const diff = lastTotal - thisTotal;
+  const pct = ((diff / lastTotal) * 100).toFixed(0);
+  const color = diff >= 0 ? 'var(--money-neon)' : 'var(--expense)';
+  const arrow = diff >= 0 ? '↓' : '↑';
+  el.innerHTML = '<div style="font-size:14px;font-weight:700;">Este mês: <span style="font-family:\'Sora\',sans-serif;">' + fmtBRL(thisTotal) + '</span></div><div style="font-size:13px;color:var(--text-muted);font-weight:600;margin-top:4px;">Mês passado: ' + fmtBRL(lastTotal) + '</div><div style="font-size:15px;color:' + color + ';font-weight:800;margin-top:8px;">' + arrow + ' ' + Math.abs(pct) + '% ' + (diff >= 0 ? 'menos' : 'mais') + ' que o mês passado</div>';
+}
+
+// ============ 50/30/20 ============
+function renderRule5020(){
+  const el = document.getElementById('rule5020');
+  if(!el) return;
+  if(!currentUser.has_salary || currentUser.monthly_income <= 0){
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);font-weight:600;">Disponível só pra quem tem renda fixa.</div>';
+    return;
+  }
+  const income = currentUser.monthly_income;
+  const need = income * 0.5;
+  const want = income * 0.3;
+  const save = income * 0.2;
+  
+  const monthFixed = bills.filter(b => b.frequency === 'monthly').reduce((s,b) => s + Number(b.amount), 0);
+  const monthExp = getMonthExpenseTotal();
+  const used = monthFixed + monthExp;
+  
+  const pctNeed = Math.min(100, (used / need) * 100);
+  const pctWant = Math.min(100, (monthExp / want) * 100);
+  const pctSave = Math.min(100, (save / save) * 100);
+  
+  el.innerHTML =
+    '<div class="rule-row"><div class="rule-header"><span style="color:#FF6B6B;">🏠 Necessidades (50%)</span><span>' + fmtBRL(Math.min(used, need)) + ' / ' + fmtBRL(need) + '</span></div><div class="rule-track"><div class="rule-fill need" style="width:' + pctNeed.toFixed(0) + '%;"></div></div></div>' +
+    '<div class="rule-row"><div class="rule-header"><span style="color:#FFB800;">🎉 Desejos (30%)</span><span>' + fmtBRL(monthExp) + ' / ' + fmtBRL(want) + '</span></div><div class="rule-track"><div class="rule-fill want" style="width:' + pctWant.toFixed(0) + '%;"></div></div></div>' +
+    '<div class="rule-row"><div class="rule-header"><span style="color:#00E676;">🏦 Poupança (20%)</span><span>' + fmtBRL(save) + ' / ' + fmtBRL(save) + '</span></div><div class="rule-track"><div class="rule-fill save" style="width:' + pctSave.toFixed(0) + '%;"></div></div></div>';
+}
+
+// ============ CALENDÁRIO ============
+function renderCalendar(){
+  const weekdays = document.getElementById('calendarWeekdays');
+  const grid = document.getElementById('calendarGrid');
+  const title = document.getElementById('calTitle');
+  if(!weekdays || !grid) return;
+  const now = new Date();
+  title.textContent = monthNames[now.getMonth()] + ' ' + now.getFullYear();
+  weekdays.innerHTML = ['D','S','T','Q','Q','S','S'].map(d => '<div class="cal-weekday">' + d + '</div>').join('');
+  
+  const year = now.getFullYear(), month = now.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const todayDate = now.getDate();
+  
+  const monthExpenses = allDailyExpenses.filter(e => { const d = parseLocalDate(e.date); return d.getMonth() === month && d.getFullYear() === year; });
+  const avg = monthExpenses.length > 0 ? monthExpenses.reduce((s,e) => s + Number(e.amount), 0) / monthExpenses.length : 0;
+  
+  let html = '';
+  for(let i = 0; i < firstDay; i++){ html += '<div class="cal-day empty"></div>'; }
+  for(let d = 1; d <= lastDay; d++){
+    const iso = year + '-' + String(month + 1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const dayExp = allDailyExpenses.filter(e => e.date === iso).reduce((s,e) => s + Number(e.amount), 0);
+    let cls = 'cal-day';
+    if(dayExp > 0){
+      if(avg > 0){
+        if(dayExp < avg * 0.7) cls += ' green';
+        else if(dayExp < avg * 1.3) cls += ' yellow';
+        else cls += ' red';
+      } else { cls += ' yellow'; }
+    }
+    if(d === todayDate) cls += ' today';
+    html += '<div class="' + cls + '">' + d + '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+// ============ CONQUISTAS ============
+function renderAchievements(){
+  document.getElementById('streakNum').textContent = currentUser.streak_current || 0;
+  document.getElementById('streakBest').textContent = 'Melhor: ' + (currentUser.streak_best || 0) + ' dias';
+  
+  if(savingsGoal > 0){
+    const monthNet = entries.filter(e => inRange(e.date,'month')).reduce((s,e) => s + entryEarn(e) - Number(e.fuel) - Number(e.food), 0);
+    const saved = Math.max(0, monthNet - getMonthExpenseTotal());
+    const pct = Math.min(100, (saved / savingsGoal) * 100);
+    document.getElementById('savingsProgressLabel').textContent = fmtBRL(saved) + ' / ' + fmtBRL(savingsGoal);
+    document.getElementById('savingsProgressPct').textContent = pct.toFixed(0) + '%';
+    document.getElementById('savingsBar').style.width = pct + '%';
+  } else {
+    document.getElementById('savingsProgressLabel').textContent = 'R$ 0,00 / R$ 0,00';
+    document.getElementById('savingsProgressPct').textContent = '0%';
+    document.getElementById('savingsBar').style.width = '0%';
+  }
+  
+  const badges = computeBadges();
+  const el = document.getElementById('badgesList');
+  el.innerHTML = badges.map(b => '<span class="badge ' + (b.earned ? 'earned' : 'locked') + '">' + b.icon + ' ' + b.name + '</span>').join('');
+}
+
+// ============ EQUIPE / ADMIN / HISTÓRICO ============
+document.getElementById('btnTeam').addEventListener('click', async ()=>{ document.getElementById('appScreen').classList.add('hidden'); document.getElementById('teamScreen').classList.remove('hidden'); await renderTeam(); });
+document.getElementById('btnBackApp').addEventListener('click', ()=>{ document.getElementById('teamScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); });
+
+async function renderTeam(){
+  const list = document.getElementById('teamList');
+  list.innerHTML = '<div class="loading">Carregando…</div>';
+  const { data: profiles } = await supa.from('profiles').select('id,name');
+  const { data: allEntries } = await supa.from('entries').select('*');
+  if(!profiles || !allEntries){ list.innerHTML = '<div class="empty">Não foi possível carregar.</div>'; return; }
+  const now = new Date();
+  const monthEntries = allEntries.filter(e=>{ const d=parseLocalDate(e.date); return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); });
+  const totals = profiles.map(p=>{
+    const mine = monthEntries.filter(e=>e.user_id===p.id);
+    const gross = mine.reduce((s,e)=>s+entryEarn(e),0);
+    const exp = mine.reduce((s,e)=>s+Number(e.fuel)+Number(e.food),0);
+    return { name:p.name, net: gross-exp, dias: mine.length };
+  }).sort((a,b)=>b.net-a.net);
+  if(totals.length===0){ list.innerHTML = '<div class="empty">Nenhum registro este mês.</div>'; return; }
+  list.innerHTML = totals.map(t=>'<div class="team-row"><div><div class="team-name">' + t.name + '</div><div class="team-sub">' + t.dias + ' dia(s)</div></div><div class="team-net ' + (t.net>=0?'entry-net pos':'entry-net neg') + '">' + fmtBRL(t.net) + '</div></div>').join('');
+}
+
+document.getElementById('btnAdmin').addEventListener('click', async ()=>{ document.getElementById('appScreen').classList.add('hidden'); document.getElementById('adminScreen').classList.remove('hidden'); await renderAdmin(); });
+document.getElementById('btnBackFromAdmin').addEventListener('click', ()=>{ document.getElementById('adminScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); });
+
+async function renderAdmin(){
+  const listEl = document.getElementById('adminUsersList');
+  listEl.innerHTML = '<div class="loading">Carregando…</div>';
+  const { data: profiles, error } = await supa.from('profiles').select('*').order('created_at', { ascending: false });
+  if(error){ listEl.innerHTML = '<div class="empty">Erro: ' + error.message + '</div>'; return; }
+  if(!profiles || profiles.length === 0){ listEl.innerHTML = '<div class="empty">Nenhum usuário.</div>'; return; }
+  const totalUsers = profiles.length;
+  const premiumUsers = profiles.filter(p => p.is_premium).length;
+  const trialUsers = profiles.filter(p => !p.is_premium && p.payment_status === 'trial').length;
+  document.getElementById('adminTotalUsers').textContent = totalUsers;
+  document.getElementById('adminPremiumUsers').textContent = premiumUsers;
+  document.getElementById('adminTrialUsers').textContent = trialUsers;
+  document.getElementById('adminRevenue').textContent = fmtBRL(premiumUsers * 14.99);
+  let html = '';
+  profiles.forEach(p => {
+    const statusLabel = p.is_premium ? 'Premium' : p.is_blocked ? 'Bloqueado' : 'Teste';
+    const statusColor = p.is_premium ? 'var(--money-neon)' : p.is_blocked ? 'var(--expense)' : 'var(--warning)';
+    let trialInfo = '';
+    if(!p.is_premium && p.trial_ends){
+      const trialEnd = new Date(p.trial_ends);
+      const daysLeft = Math.ceil((trialEnd.getTime() - new Date().getTime()) / (1000*60*60*24));
+      trialInfo = '<span>Trial: ' + (daysLeft > 0 ? daysLeft + ' dia(s)' : 'EXPIRADO') + '</span>';
+    }
+    html += '<div class="bill-card" style="margin-bottom:10px;"><div class="bill-card-header"><span class="bill-card-name">' + (p.name || 'Sem nome') + (p.is_admin ? ' 👑' : '') + '</span><span style="color:' + statusColor + ';font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.05);">' + statusLabel + '</span></div><div class="bill-card-details"><span>Renda: ' + fmtBRL(p.monthly_income || 0) + '</span>' + trialInfo + '</div><div class="bill-card-actions">';
+    if(!p.is_admin) html += '<button class="btn-delete make-admin-btn" data-id="' + p.id + '" style="color:var(--money-neon);">Tornar admin</button>';
+    if(p.is_blocked) html += '<button class="btn-delete unblock-btn" data-id="' + p.id + '">Desbloquear</button>';
+    else if(!p.is_admin) html += '<button class="btn-delete block-btn" data-id="' + p.id + '">Bloquear</button>';
+    html += '</div></div>';
+  });
+  listEl.innerHTML = html;
+  listEl.querySelectorAll('.make-admin-btn').forEach(btn => btn.addEventListener('click', async () => { await supa.from('profiles').update({ is_admin: true }).eq('id', btn.dataset.id); await renderAdmin(); }));
+  listEl.querySelectorAll('.block-btn').forEach(btn => btn.addEventListener('click', async () => { await supa.from('profiles').update({ is_blocked: true }).eq('id', btn.dataset.id); await renderAdmin(); }));
+  listEl.querySelectorAll('.unblock-btn').forEach(btn => btn.addEventListener('click', async () => { await supa.from('profiles').update({ is_blocked: false }).eq('id', btn.dataset.id); await renderAdmin(); }));
+}
+
+document.getElementById('histAtividades').addEventListener('click', ()=>{
+  document.getElementById('histAtividades').style.background = 'var(--money)';
+  document.getElementById('histAtividades').style.color = '#0F0F0F';
+  document.getElementById('histAtividades').style.border = 'none';
+  document.getElementById('histPagamentos').style.background = 'transparent';
+  document.getElementById('histPagamentos').style.color = 'var(--text)';
+  document.getElementById('histPagamentos').style.border = '1px solid var(--border)';
+  document.getElementById('activityHistoryList').classList.remove('hidden');
+  document.getElementById('paymentsHistoryList').classList.add('hidden');
+  renderActivityHistory();
+});
+document.getElementById('histPagamentos').addEventListener('click', ()=>{
+  document.getElementById('histPagamentos').style.background = 'var(--money)';
+  document.getElementById('histPagamentos').style.color = '#0F0F0F';
+  document.getElementById('histPagamentos').style.border = 'none';
+  document.getElementById('histAtividades').style.background = 'transparent';
+  document.getElementById('histAtividades').style.color = 'var(--text)';
+  document.getElementById('histAtividades').style.border = '1px solid var(--border)';
+  document.getElementById('paymentsHistoryList').classList.remove('hidden');
+  document.getElementById('activityHistoryList').classList.add('hidden');
+  renderPaymentsHistory();
+});
+
+function renderActivityHistory(){
+  const listEl = document.getElementById('activityHistoryList');
+  if(entries.length === 0){ listEl.innerHTML = '<div class="empty">Nenhuma atividade.</div>'; return; }
+  listEl.innerHTML = entries.map(e => {
+    const earn = entryEarn(e); const net = earn - Number(e.fuel) - Number(e.food);
+    const d = parseLocalDate(e.date); const dateLabel = d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    const km = Number(e.km) || 0;
+    const netPerKm = km > 0 ? net / km : 0;
+    const earnDetails=[]; if(e.uber) earnDetails.push('Uber '+fmtBRL(e.uber)); if(e.n99) earnDetails.push('99 '+fmtBRL(e.n99)); if(e.indrive) earnDetails.push('InDrive '+fmtBRL(e.indrive)); if(e.particular) earnDetails.push('Particular '+fmtBRL(e.particular));
+    const details=[]; if(e.fuel) details.push('Comb: '+fmtBRL(e.fuel)); if(e.food) details.push('Alim: '+fmtBRL(e.food)); if(e.hours) details.push(e.hours+'h'); if(e.km) details.push(e.km+'km');
+    const earnLine = earnDetails.length ? earnDetails.join(' · ') : ('Receitas '+fmtBRL(earn));
+    let kmLine = '';
+    if(km > 0){ kmLine = '<span style="color:var(--money-neon);font-weight:700;">R$ ' + netPerKm.toFixed(2).replace('.', ',') + '/km</span>'; }
+    return '<div class="bill-card"><div class="bill-card-header"><span class="bill-card-name">' + dateLabel + '</span><span class="bill-card-amount" style="color:' + (net>=0?'var(--money-neon)':'var(--expense)') + ';">' + fmtBRL(net) + '</span></div><div class="bill-card-details"><span>' + earnLine + (details.length?' · ' + details.join(' · '):'') + '</span>' + kmLine + '</div><div class="bill-card-actions"><button class="btn-delete delete-entry-btn" data-id="' + e.id + '">Excluir</button></div></div>';
+  }).join('');
+  listEl.querySelectorAll('.delete-entry-btn').forEach(btn => {
+    btn.addEventListener('click', async () => { await deleteEntry(btn.dataset.id); renderActivityHistory(); });
+  });
+}
+
+async function renderPaymentsHistory(){
+  const listEl = document.getElementById('paymentsHistoryList');
+  listEl.innerHTML = '<div class="loading">Carregando…</div>';
+  const { data: history } = await supa.from('payment_history').select('*').eq('user_id', currentUser.id).order('paid_date', { ascending: false });
+  if(!history || history.length === 0){ listEl.innerHTML = '<div class="empty">Nenhum pagamento registrado.</div>'; return; }
+  listEl.innerHTML = history.map(h => {
+    const freqLabel = h.frequency === 'daily' ? 'Diária' : h.frequency === 'weekly' ? 'Semanal' : 'Mensal';
+    const installmentLabel = h.total_installments > 1 ? ' · Parcela ' + h.installment_number + '/' + h.total_installments : '';
+    const paidDate = h.paid_date ? new Date(h.paid_date + 'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '';
+    return '<div class="bill-card"><div class="bill-card-header"><span class="bill-card-name">' + h.bill_name + '</span><span class="bill-card-amount">' + fmtBRL(h.amount) + '</span></div><div class="bill-card-details"><span>' + freqLabel + installmentLabel + '</span><span style="color:var(--money-neon);font-weight:700;">✅ Pago em ' + paidDate + '</span></div></div>';
+  }).join('');
+}
+
+// ============ PLANEJAR ============
+document.getElementById('planDays').addEventListener('change', (ev) => {
+  document.getElementById('planCustomDateField').classList.toggle('hidden', ev.target.value !== 'custom');
+});
+
+document.getElementById('planAmount').addEventListener('input', (e) => {
+  e.target.value = maskMoney(e.target.value);
+});
+
+document.getElementById('weekTotal').addEventListener('input', (e) => {
+  e.target.value = maskMoney(e.target.value);
+});
+
+document.getElementById('btnCalcPlan').addEventListener('click', async () => {
+  const name = document.getElementById('planName').value.trim();
+  const amount = unmaskMoney(document.getElementById('planAmount').value);
+  const daysValue = document.getElementById('planDays').value;
+  const customDate = document.getElementById('planEndDate').value;
+
+  if (!name) { await showAlert('Atenção', 'Informe o nome do plano.', '⚠️'); return; }
+  if (amount <= 0) { await showAlert('Atenção', 'Informe o valor.', '⚠️'); return; }
+
+  let days = 0;
+  let endDate = null;
+  const startDate = todayISO();
+
+  if (daysValue === 'custom') {
+    if (!customDate) { await showAlert('Atenção', 'Escolha a data final.', '⚠️'); return; }
+    const start = new Date(startDate);
+    const end = new Date(customDate);
+    days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    endDate = customDate;
+  } else {
+    days = parseInt(daysValue);
+    const end = new Date();
+    end.setDate(end.getDate() + days - 1);
+    endDate = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  }
+
+  if (days <= 0) { await showAlert('Atenção', 'Data inválida.', '⚠️'); return; }
+
+  const perDay = amount / days;
+  const perHour = perDay / 8;
+  const totalKmLast = entries.filter(e => Number(e.km) > 0).slice(0, 10);
+  const avgKm = totalKmLast.length > 0
+    ? totalKmLast.reduce((s, e) => s + (entryEarn(e) - Number(e.fuel) - Number(e.food)), 0) / totalKmLast.reduce((s, e) => s + Number(e.km), 0)
+    : 0;
+  const perKm = avgKm > 0 ? avgKm : 0;
+  const kmPerDay = perKm > 0 ? perDay / perKm : 0;
+
+  let html = '<div class="highlight-box"><div class="big">' + fmtBRL(amount) + '</div><div class="label">em ' + days + ' dia(s)</div></div>';
+  html += '<div class="work-row" style="margin-top:12px;"><span class="work-label">Por dia</span><span class="work-value pos">' + fmtBRL(perDay) + '</span></div>';
+  html += '<div class="work-row"><span class="work-label">Por hora (8h/dia)</span><span class="work-value">' + fmtBRL(perHour) + '</span></div>';
+  if (perKm > 0) {
+    html += '<div class="work-row"><span class="work-label">Km por dia (est.)</span><span class="work-value">' + kmPerDay.toFixed(0) + ' km</span></div>';
+  }
+  document.getElementById('planCalcResult').innerHTML = html;
+
+  showSpinner('btnCalcPlan', 'calcSpinner');
+  const { error } = await supa.from('plans').insert({
+    user_id: currentUser.id,
+    name,
+    target_amount: amount,
+    start_date: startDate,
+    end_date: endDate,
+    status: 'active'
+  });
+  hideSpinner('btnCalcPlan', 'calcSpinner');
+
+  if (error) { await showAlert('Erro', error.message, '❌'); return; }
+
+  document.getElementById('planName').value = '';
+  document.getElementById('planAmount').value = '';
+  await loadPlans();
+  await showAlert('Sucesso', 'Plano criado!', '✅');
+});
+
+function renderWeekDaysGrid() {
+  const grid = document.getElementById('weekDaysGrid');
+  if(!grid) return;
+  const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const values = window._weekValues || [0, 0, 0, 0, 0, 0, 0];
+  let html = '';
+  days.forEach((d, i) => {
+    html += '<div class="work-row" style="gap:8px;"><span class="work-label" style="min-width:36px;">' + d + '</span><input type="text" class="week-day-input money-mask" data-idx="' + i + '" value="' + (values[i] > 0 ? fmtBRL(values[i]) : '') + '" placeholder="R$ 0,00" inputmode="decimal" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;font-weight:700;"></div>';
+  });
+  grid.innerHTML = html;
+  grid.querySelectorAll('.week-day-input').forEach(inp => {
+    inp.addEventListener('input', (e) => { e.target.value = maskMoney(e.target.value); });
+    inp.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.dataset.idx);
+      window._weekValues[idx] = unmaskMoney(e.target.value);
+    });
+  });
+}
+
+document.getElementById('btnDistributeEven').addEventListener('click', () => {
+  const total = unmaskMoney(document.getElementById('weekTotal').value);
+  if (total <= 0) { showAlert('Atenção', 'Informe o total da semana.', '⚠️'); return; }
+  const perDay = total / 7;
+  window._weekValues = [perDay, perDay, perDay, perDay, perDay, perDay, perDay];
+  renderWeekDaysGrid();
+});
+
+document.getElementById('btnClearWeek').addEventListener('click', () => {
+  window._weekValues = [0, 0, 0, 0, 0, 0, 0];
+  renderWeekDaysGrid();
+});
+
+document.getElementById('btnSaveWeek').addEventListener('click', async () => {
+  const values = window._weekValues || [0, 0, 0, 0, 0, 0, 0];
+  const total = values.reduce((s, v) => s + v, 0);
+  if (total <= 0) { await showAlert('Atenção', 'Defina pelo menos um dia.', '⚠️'); return; }
+
+  showSpinner('btnSaveWeek', 'weekSpinner');
+
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((day + 6) % 7));
+  const weekStart = new Date(monday.getTime() - monday.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+  await supa.from('weekly_goals').delete().eq('user_id', currentUser.id).eq('week_start', weekStart);
+
+  const rows = values.map((v, i) => ({
+    user_id: currentUser.id,
+    week_start: weekStart,
+    day_of_week: i + 1,
+    target_amount: v
+  })).filter(r => r.target_amount > 0);
+
+  const { error } = await supa.from('weekly_goals').insert(rows);
+  hideSpinner('btnSaveWeek', 'weekSpinner');
+
+  if (error) { await showAlert('Erro', error.message, '❌'); return; }
+  await loadWeekGoals();
+  await showAlert('Sucesso', 'Semana salva!', '✅');
+});
+
+async function loadWeekGoals() {
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((day + 6) % 7));
+  const weekStart = new Date(monday.getTime() - monday.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+  const { data } = await supa.from('weekly_goals').select('*').eq('user_id', currentUser.id).eq('week_start', weekStart);
+  currentWeekGoals = data || [];
+
+  const values = [0, 0, 0, 0, 0, 0, 0];
+  currentWeekGoals.forEach(g => { values[g.day_of_week - 1] = Number(g.target_amount); });
+  window._weekValues = values;
+  renderWeekDaysGrid();
+  renderWeekProgress();
+}
+
+function renderWeekProgress() {
+  const el = document.getElementById('weekProgress');
+  if (!el) return;
+  if (currentWeekGoals.length === 0) { el.innerHTML = ''; return; }
+
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((day + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+
+  const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  let html = '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">Progresso da semana</div>';
+
+  const values = window._weekValues || [0, 0, 0, 0, 0, 0, 0];
+  let totalTarget = 0;
+  let totalDone = 0;
+
+  values.forEach((target, i) => {
+    if (target <= 0) return;
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    const dayEntries = entries.filter(e => e.date === iso);
+    const done = dayEntries.reduce((s, e) => s + (entryEarn(e) - Number(e.fuel) - Number(e.food)), 0);
+    const pct = Math.min(100, (done / target) * 100);
+    const color = pct >= 100 ? 'var(--money-neon)' : pct >= 60 ? 'var(--warning)' : 'var(--expense)';
+
+    totalTarget += target;
+    totalDone += Math.max(0, done);
+
+    html += '<div style="margin-bottom:8px;">';
+    html += '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:3px;">';
+    html += '<span>' + days[i] + '</span>';
+    html += '<span style="color:' + color + ';">' + fmtBRL(done) + ' / ' + fmtBRL(target) + '</span>';
+    html += '</div>';
+    html += '<div class="rule-track"><div class="rule-fill save" style="width:' + pct.toFixed(0) + '%;background:' + color + ';"></div></div>';
+    html += '</div>';
+  });
+
+  html += '<div class="work-divider"></div>';
+  html += '<div class="work-row"><span class="work-label">Total da semana</span><span class="work-value pos">' + fmtBRL(totalDone) + ' / ' + fmtBRL(totalTarget) + '</span></div>';
+
+  el.innerHTML = html;
+}
+
+async function loadPlans() {
+  const { data } = await supa.from('plans').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+  currentPlans = data || [];
+  renderPlans();
+  updatePlanejarSub();
+}
+
+function updatePlanejarSub() {
+  const sub = document.getElementById('planejarSub');
+  if (!sub) return;
+  const active = currentPlans.filter(p => p.status === 'active').length;
+  sub.textContent = active > 0 ? active + ' plano(s) ativo(s)' : 'Metas e semana';
+}
+
+function renderPlans() {
+  const el = document.getElementById('plansList');
+  if (!el) return;
+  if (currentPlans.length === 0) { el.innerHTML = '<div class="empty" style="padding:14px;">Nenhum plano ainda.</div>'; return; }
+
+  el.innerHTML = currentPlans.map(p => {
+    const start = parseLocalDate(p.start_date);
+    const end = parseLocalDate(p.end_date);
+    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+    const planEntries = entries.filter(e => e.date >= p.start_date && e.date <= p.end_date);
+    const done = planEntries.reduce((s, e) => s + (entryEarn(e) - Number(e.fuel) - Number(e.food)), 0);
+    const pct = Math.min(100, (done / Number(p.target_amount)) * 100);
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let statusLabel = 'Em andamento';
+    let statusColor = 'var(--warning)';
+    if (done >= Number(p.target_amount)) { statusLabel = '✅ Concluído'; statusColor = 'var(--money-neon)'; }
+    else if (end < today) { statusLabel = '❌ Não bateu'; statusColor = 'var(--expense)'; }
+
+    const startLabel = start.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const endLabel = end.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+    return '<div class="bill-card"><div class="bill-card-header"><span class="bill-card-name">' + p.name + '</span><span style="color:' + statusColor + ';font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.05);">' + statusLabel + '</span></div>' +
+      '<div class="bill-card-details"><span>' + startLabel + ' → ' + endLabel + ' · ' + totalDays + ' dias</span><span><strong>' + fmtBRL(done) + '</strong> de <strong>' + fmtBRL(p.target_amount) + '</strong></span></div>' +
+      '<div class="rule-track"><div class="rule-fill save" style="width:' + pct.toFixed(0) + '%;background:' + statusColor + ';"></div></div>' +
+      '<div class="bill-card-actions" style="margin-top:8px;"><button class="btn-delete delete-plan-btn" data-id="' + p.id + '">Excluir</button></div></div>';
+  }).join('');
+
+  el.querySelectorAll('.delete-plan-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const confirmed = await showConfirm('Excluir plano', 'Tem certeza?', 'Excluir', true);
+      if (!confirmed) return;
+      await supa.from('plans').delete().eq('id', btn.dataset.id);
+      await loadPlans();
+    });
+  });
+}
+
+// ============ INIT ============
+['btnWeek','btnMonth','btnAll'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el){ el.addEventListener('click', (ev)=>{ ev.stopPropagation(); document.querySelectorAll('.odo-toggle button').forEach(b=>b.classList.remove('active')); ev.target.classList.add('active'); odoRange = ev.target.dataset.range; render(); }); }
+});
+
+document.getElementById('btnSave').addEventListener('click', addEntry);
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const installBtn = document.getElementById('btnInstallApp');
+  if(installBtn) installBtn.classList.remove('hidden');
+});
+
+document.getElementById('btnInstallApp').addEventListener('click', async () => {
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('btnInstallApp').classList.add('hidden');
+  }
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) { registration.unregister(); }
+  });
+  caches.keys().then(function(names) {
+    for (let name of names) { caches.delete(name); }
+  });
+}
+</script>
